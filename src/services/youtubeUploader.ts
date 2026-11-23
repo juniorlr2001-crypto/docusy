@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { CONFIG } from '../config.js';
 
 async function getYouTubeAccessToken(): Promise<string> {
@@ -35,8 +36,15 @@ export async function uploadVideoToYouTube(params: {
   tags: string[];
   thumbnailPath?: string;
   captionsSrtPath?: string;
+  firstCommentText?: string;
   privacyStatus?: 'public' | 'unlisted' | 'private';
-}): Promise<{ videoId: string; url: string; thumbnailAttached: boolean; captionsAttached?: boolean }> {
+}): Promise<{
+  videoId: string;
+  url: string;
+  thumbnailAttached: boolean;
+  captionsAttached?: boolean;
+  commentPosted?: boolean;
+}> {
   const accessToken = await getYouTubeAccessToken();
   const videoBuf = fs.readFileSync(params.videoPath);
 
@@ -57,10 +65,12 @@ export async function uploadVideoToYouTube(params: {
           tags: params.tags.slice(0, 15),
           categoryId: '27', // Education / Documentary
           defaultLanguage: 'es',
+          defaultAudioLanguage: 'es',
         },
         status: {
           privacyStatus: params.privacyStatus || CONFIG.YOUTUBE_PRIVACY || 'unlisted',
           selfDeclaredMadeForKids: false,
+          containsSyntheticMedia: true,
         },
       }),
     }
@@ -149,28 +159,72 @@ export async function uploadVideoToYouTube(params: {
     }
   }
 
+  let commentPosted = false;
+  if (params.firstCommentText && params.firstCommentText.trim()) {
+    try {
+      const cmRes = await fetch(
+        'https://www.googleapis.com/youtube/v3/commentThreads?part=snippet',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: JSON.stringify({
+            snippet: {
+              videoId: uploaded.id,
+              topLevelComment: {
+                snippet: {
+                  textOriginal: params.firstCommentText.trim(),
+                },
+              },
+            },
+          }),
+        }
+      );
+      commentPosted = cmRes.ok;
+    } catch {
+      commentPosted = false;
+    }
+  }
+
   return {
     videoId: uploaded.id,
     url: `https://www.youtube.com/watch?v=${uploaded.id}`,
     thumbnailAttached,
     captionsAttached,
+    commentPosted,
   };
 }
 
 /**
  * Unattended full-episode uploader:
- * 1. Uploads 16:9 Documentary + 16:9 Thumbnail + .srt Captions
- * 2. Appends full documentary link to Bridge Short description & uploads 9:16 Bridge Short
+ * 1. Uploads 16:9 Documentary + 16:9 Thumbnail + .srt Captions + First comment
+ * 2. Appends full documentary link to Bridge Short description & uploads 9:16 Bridge Short + 9:16 Thumbnail + First comment
  * 3. Persists YouTube URLs into metadata.json
  */
 export async function uploadEpisodeBundleToYouTube(
   metadataPath: string,
   options?: { privacyStatus?: 'public' | 'unlisted' | 'private' }
 ): Promise<{
-  documentary: { videoId: string; url: string; thumbnailAttached: boolean; captionsAttached?: boolean };
-  bridgeShort: { videoId: string; url: string; thumbnailAttached: boolean };
+  documentary: {
+    videoId: string;
+    url: string;
+    thumbnailAttached: boolean;
+    captionsAttached?: boolean;
+    commentPosted?: boolean;
+  };
+  bridgeShort: {
+    videoId: string;
+    url: string;
+    thumbnailAttached: boolean;
+    commentPosted?: boolean;
+  };
 }> {
   const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+  const epDir = path.dirname(metadataPath);
+  const shortThumbCandidate =
+    meta?.files?.shortThumbnail || path.join(epDir, 'thumbnail_short_9x16.jpg');
   const privacy =
     options?.privacyStatus ||
     ((CONFIG.YOUTUBE_PRIVACY as 'public' | 'unlisted' | 'private') || 'unlisted');
@@ -183,20 +237,31 @@ export async function uploadEpisodeBundleToYouTube(
     tags: meta.youtube.tags || [],
     thumbnailPath: meta.files.thumbnail,
     captionsSrtPath: meta.files.captionsSrt,
+    firstCommentText: meta.youtube.pinnedComment,
     privacyStatus: privacy,
   });
-  console.log(`[YouTubeUploader] ✅ Documental 16:9 publicado: ${docuRes.url}`);
+  console.log(
+    `[YouTubeUploader] ✅ Documental 16:9 publicado: ${docuRes.url} (miniatura=${docuRes.thumbnailAttached}, srt=${docuRes.captionsAttached}, comentario=${docuRes.commentPosted})`
+  );
 
   const shortDescWithLink = `${meta.bridgeShort.description}\n\n🎬 Documental completo: ${docuRes.url}`;
+  const shortComment = `🎬 Mira el documental completo en nuestro canal: ${docuRes.url}\n\n💬 ${
+    meta.youtube.pinnedComment || ''
+  }`.trim();
+
   console.log(`[YouTubeUploader] 📱 Subiendo Short puente 9:16 (${privacy}): "${meta.bridgeShort.title}"...`);
   const shortRes = await uploadVideoToYouTube({
     videoPath: meta.files.bridgeShort,
     title: meta.bridgeShort.title,
     description: shortDescWithLink,
     tags: Array.from(new Set([...(meta.youtube.tags || []), 'Shorts'])),
+    thumbnailPath: fs.existsSync(shortThumbCandidate) ? shortThumbCandidate : undefined,
+    firstCommentText: shortComment,
     privacyStatus: privacy,
   });
-  console.log(`[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url}\n`);
+  console.log(
+    `[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url} (miniatura=${shortRes.thumbnailAttached}, comentario=${shortRes.commentPosted})\n`
+  );
 
   meta.youtubeUpload = {
     uploadedAt: new Date().toISOString(),

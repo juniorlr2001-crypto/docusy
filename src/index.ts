@@ -252,6 +252,7 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
       documentary: documentaryPath,
       bridgeShort: shortPath,
       thumbnail: thumbnailPath,
+      shortThumbnail: shortThumbnailPath,
       captionsSrt: captionsPath,
     },
   };
