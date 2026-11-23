@@ -645,7 +645,7 @@ async function discoverNewVerifiedTopicsForCategory(
       'Lugares, fenómenos naturales, experimentos o misiones científicas extremas reales en la Tierra o el espacio (abismos, cuevas extremas, sondas interestelares, eventos astronómicos o geológicos).',
   };
 
-  const prompt = `Eres el director de investigación de un canal de documentales estilo IMAX ("Archivos Ocultos").
+  const prompt = `Eres el director de investigación de un canal de documentales estilo IMAX ("${CONFIG.CHANNEL_NAME}").
 Necesito descubrir 5 NUEVOS casos 100% REALES, históricamente documentados y con artículo propio en Wikipedia en español para la categoría: "${category}" (${categoryDescriptions[category]}).
 
 PROHIBIDO REPETIR cualquiera de estos casos o artículos ya usados o conocidos:
