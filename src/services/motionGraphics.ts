@@ -732,9 +732,11 @@ export async function buildShortKineticOverlayPng(params: {
     .join('');
 
   const ctaSvg = params.showCta
-    ? `<rect x="96" y="1475" width="888" height="96" rx="20" fill="${accent.primary}"/>
-       <text x="540" y="1536" text-anchor="middle" fill="#020617" font-family="Arial Black, Segoe UI, sans-serif" font-size="34" font-weight="900">DOCUMENTAL COMPLETO EN EL CANAL</text>`
-    : '';
+    ? `<rect x="76" y="1450" width="928" height="128" rx="22" fill="#E11D48" stroke="#FFFFFF" stroke-width="3.5"/>
+       <text x="540" y="1504" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, Impact, Segoe UI, sans-serif" font-size="33" font-weight="900" letter-spacing="1.5">🎬 MIRA EL DOCUMENTAL COMPLETO</text>
+       <text x="540" y="1552" text-anchor="middle" fill="#FFE600" font-family="Arial Black, Impact, Segoe UI, sans-serif" font-size="31" font-weight="900" letter-spacing="1.5">👇 TOCA EL CANAL @${safeChan} ABAJO 👇</text>`
+    : `<rect x="190" y="1495" width="700" height="64" rx="16" fill="#020617" fill-opacity="0.82" stroke="${accent.primary}" stroke-width="2"/>
+       <text x="540" y="1537" text-anchor="middle" fill="#FFE600" font-family="Arial Black, Segoe UI, sans-serif" font-size="25" font-weight="900" letter-spacing="1.5">🎬 HISTORIA COMPLETA EN @${safeChan}</text>`;
 
   const barW = 860;
   const barFillW = Math.max(18, Math.round(barW * Math.max(0, Math.min(1, params.progress))));

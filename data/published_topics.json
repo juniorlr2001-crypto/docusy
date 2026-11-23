@@ -3,21 +3,24 @@
     "alvarenga-438-dias",
     "stanislav-petrov-1983",
     "juliane-koepcke-amazonas",
-    "faro-islas-flannan"
+    "faro-islas-flannan",
+    "pozo-superprofundo-kola"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
     "stanislav_petrov",
     "juliane_koepcke",
-    "faro_de_las_islas_flannan"
+    "faro_de_las_islas_flannan",
+    "pozo_superprofundo_de_kola"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
     "el_hombre_que_desobedecio_una_alarma_nuclear_y_salvo_al_mundo_en_5_minutos",
     "cayo_3_000_metros_desde_un_avion_partido_por_un_rayo_y_camino_11_dias_en_el_amazonas",
-    "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico"
+    "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico",
+    "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra"
   ],
-  "lastCategory": "misterios",
+  "lastCategory": "ciencia_extrema",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -46,6 +49,13 @@
       "wikiTitleEs": "Faro_de_las_islas_Flannan",
       "titleSeed": "El misterio del faro vacío: 3 hombres desaparecieron sin dejar rastro en medio del Atlántico",
       "usedAt": "2026-11-23T02:06:42.935Z"
+    },
+    {
+      "id": "pozo-superprofundo-kola",
+      "category": "ciencia_extrema",
+      "wikiTitleEs": "Pozo_superprofundo_de_Kola",
+      "titleSeed": "Qué encontraron cuando perforaron el agujero más profundo de la Tierra",
+      "usedAt": "2026-11-23T22:31:50.000Z"
     }
   ]
 }

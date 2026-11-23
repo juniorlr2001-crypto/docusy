@@ -743,13 +743,25 @@ export async function assembleBridgeShortVideo(params: {
   shortAudioPath: string;
   shortDurationSec: number;
   shortAssets: CuratedBeatAsset[];
+  shortThumbnailPath?: string;
   musicPath: string;
   sfx: CinemaSfxPack;
   channelName: string;
   workDir: string;
   outputShortPath: string;
 }): Promise<{ shortPath: string; durationSec: number }> {
-  const { script, shortAudioPath, shortDurationSec, shortAssets, musicPath, sfx, channelName, workDir, outputShortPath } = params;
+  const {
+    script,
+    shortAudioPath,
+    shortDurationSec,
+    shortAssets,
+    shortThumbnailPath,
+    musicPath,
+    sfx,
+    channelName,
+    workDir,
+    outputShortPath,
+  } = params;
   const shortDir = path.join(workDir, 'short_1080p');
   fs.mkdirSync(shortDir, { recursive: true });
 
@@ -814,6 +826,34 @@ export async function assembleBridgeShortVideo(params: {
 
   const captionedSegments: string[] = [];
   let cursor = 0;
+
+  // Bake the 9:16 poster thumbnail into the opening frames (0.2s) of the Short MP4 so YouTube Shorts feed/grid shows the poster cover!
+  if (shortThumbnailPath && fs.existsSync(shortThumbnailPath)) {
+    const posterClip = path.join(shortDir, 'short_poster_intro.mp4');
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(shortThumbnailPath)
+        .inputOptions(['-loop 1', '-t 0.20'])
+        .complexFilter(`[0:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS},setsar=1,format=yuv420p[outv]`, 'outv')
+        .outputOptions([
+          '-y',
+          '-c:v libx264',
+          '-preset veryfast',
+          '-crf 19',
+          `-r ${FPS}`,
+          `-video_track_timescale ${timescale}`,
+          '-t 0.20',
+          '-an',
+        ])
+        .output(posterClip)
+        .on('end', () => resolve())
+        .on('error', err => reject(err))
+        .run();
+    });
+    if (fs.existsSync(posterClip)) {
+      captionedSegments.push(posterClip);
+    }
+  }
 
   for (let i = 0; i < captionChunks.length; i++) {
     const share = (captionChunks[i].length / totalChars) * shortDurationSec;

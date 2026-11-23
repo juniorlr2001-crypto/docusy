@@ -189,6 +189,7 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     shortAudioPath: shortAudio.audioPath,
     shortDurationSec: shortAudio.durationSec,
     shortAssets,
+    shortThumbnailPath,
     musicPath,
     sfx,
     channelName: CONFIG.CHANNEL_NAME,
