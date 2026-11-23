@@ -47,7 +47,16 @@ function extractJsonObject(raw: string): any {
   if (start === -1 || end === -1 || end <= start) {
     throw new Error('La respuesta de Gemini no contiene un bloque JSON válido.');
   }
-  return JSON.parse(cleaned.slice(start, end + 1));
+  const slice = cleaned.slice(start, end + 1);
+  try {
+    return JSON.parse(slice);
+  } catch {
+    // Strip trailing commas before } or ] and control chars inside strings
+    const sanitized = slice
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ' ');
+    return JSON.parse(sanitized);
+  }
 }
 
 function sanitizeMapSpec(raw: any): MapSpec | undefined {
@@ -99,49 +108,67 @@ async function callGeminiJson(prompt: string): Promise<any> {
     throw new Error('Falta DOCU_GEMINI_API_KEY (o GEMINI_API_KEY) en .env para redactar el guion documental.');
   }
 
-  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  const models = [
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+  ];
   let lastError = '';
 
-  for (const model of models) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(CONFIG.GEMINI_API_KEY)}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.72,
-            maxOutputTokens: 16384,
-            responseMimeType: 'application/json',
-          },
-        }),
-        signal: AbortSignal.timeout(120_000),
-      });
+  for (let round = 1; round <= 3; round++) {
+    if (round > 1) {
+      const waitSec = round * 10;
+      console.log(`[ScriptEngine] ⏳ Reintentando ronda ${round}/3 tras ${waitSec}s de espera...`);
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+    }
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        lastError = `${model} HTTP ${res.status}: ${errText.slice(0, 260)}`;
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(CONFIG.GEMINI_API_KEY)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.72,
+              maxOutputTokens: 32768,
+              responseMimeType: 'application/json',
+            },
+          }),
+          signal: AbortSignal.timeout(120_000),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          lastError = `${model} HTTP ${res.status}: ${errText.slice(0, 260)}`;
+          console.warn(`[ScriptEngine] ⚠️ ${lastError}`);
+          if (res.status === 429 || res.status === 503) {
+            await new Promise(r => setTimeout(r, 6000));
+          }
+          continue;
+        }
+
+        const data: any = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts
+          ?.map((p: any) => p?.text || '')
+          .join('')
+          .trim();
+
+        if (!text) {
+          lastError = `${model} devolvió respuesta vacía.`;
+          continue;
+        }
+
+        const parsed = extractJsonObject(text);
+        console.log(`[ScriptEngine] ✅ Guion + storyboard IMAX generado con ${model} (${text.length} chars).`);
+        return parsed;
+      } catch (err: any) {
+        lastError = `${model}: ${err?.message || err}`;
         console.warn(`[ScriptEngine] ⚠️ ${lastError}`);
-        continue;
       }
-
-      const data: any = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => p?.text || '')
-        .join('')
-        .trim();
-
-      if (!text) {
-        lastError = `${model} devolvió respuesta vacía.`;
-        continue;
-      }
-
-      console.log(`[ScriptEngine] ✅ Guion + storyboard IMAX generado con ${model} (${text.length} chars).`);
-      return extractJsonObject(text);
-    } catch (err: any) {
-      lastError = `${model}: ${err?.message || err}`;
-      console.warn(`[ScriptEngine] ⚠️ ${lastError}`);
     }
   }
 

@@ -43,8 +43,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies & system fonts
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core fontconfig
+          npm ci
 
       - name: Generate 1080p Documentary + Bridge Short + Auto-Upload to YouTube
         env:

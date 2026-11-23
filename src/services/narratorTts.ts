@@ -105,11 +105,11 @@ export async function generateNarrationAudio(options: {
       const ttsModel = modelCfg.id;
       const ttsInputText = modelCfg.supportsDirective ? `${styleDirective}\n\n${cleanText}` : cleanText;
 
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 4; attempt++) {
         // Polite spacing between Gemini TTS requests to stay comfortably inside free RPM limits
         const elapsed = Date.now() - lastGeminiTtsCallMs;
-        if (lastGeminiTtsCallMs > 0 && elapsed < 5000) {
-          await new Promise(r => setTimeout(r, 5000 - elapsed));
+        if (lastGeminiTtsCallMs > 0 && elapsed < 10_000) {
+          await new Promise(r => setTimeout(r, 10_000 - elapsed));
         }
         lastGeminiTtsCallMs = Date.now();
 
@@ -132,9 +132,12 @@ export async function generateNarrationAudio(options: {
             signal: AbortSignal.timeout(90_000),
           });
 
-          if (res.status === 429 && attempt === 1) {
-            console.warn(`[NarratorTTS] ⏳ ${ttsModel} 429 (rate limit), esperando 18s para reintentar...`);
-            await new Promise(r => setTimeout(r, 18_000));
+          if ((res.status === 429 || res.status === 503) && attempt < 4) {
+            const waitMs = attempt * 22_000;
+            console.warn(
+              `[NarratorTTS] ⏳ ${ttsModel} HTTP ${res.status} (intento ${attempt}/4), esperando ${waitMs / 1000}s...`
+            );
+            await new Promise(r => setTimeout(r, waitMs));
             continue;
           }
 
@@ -159,10 +162,13 @@ export async function generateNarrationAudio(options: {
           } else {
             const errTxt = await res.text().catch(() => '');
             console.warn(`[NarratorTTS] ⚠️ ${ttsModel} HTTP ${res.status}: ${errTxt.slice(0, 180)}`);
-            if (res.status === 400 || res.status === 404 || res.status === 429) break; // move to next TTS model cleanly
+            if (res.status === 400 || res.status === 404) break; // move to next TTS model cleanly
           }
         } catch (err: any) {
-          console.warn(`[NarratorTTS] ⚠️ ${ttsModel} error: ${err?.message || err}`);
+          console.warn(`[NarratorTTS] ⚠️ ${ttsModel} error (intento ${attempt}/4): ${err?.message || err}`);
+          if (attempt < 4) {
+            await new Promise(r => setTimeout(r, 8000));
+          }
         }
       }
     }
@@ -189,6 +195,42 @@ export async function generateNarrationAudio(options: {
       lastErr = err?.message || String(err);
       console.warn(`[NarratorTTS] ⚠️ Edge TTS (${voice}) falló: ${lastErr}`);
     }
+  }
+
+  // Strategy 3: Cloud-safe chunked HTTP Spanish TTS fallback (works even from restricted datacenter IPs)
+  try {
+    const words = cleanText.split(/\s+/).filter(Boolean);
+    const chunks: string[] = [];
+    let cur = '';
+    for (const w of words) {
+      if ((cur + ' ' + w).trim().length > 180) {
+        if (cur) chunks.push(cur);
+        cur = w;
+      } else {
+        cur = (cur + ' ' + w).trim();
+      }
+    }
+    if (cur) chunks.push(cur);
+
+    const bufs: Buffer[] = [];
+    for (const chunk of chunks) {
+      const gUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=es-US&q=${encodeURIComponent(chunk)}`;
+      const gRes = await fetch(gUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!gRes.ok) throw new Error(`Google TTS HTTP ${gRes.status}`);
+      bufs.push(Buffer.from(await gRes.arrayBuffer()));
+    }
+    const mergedMp3 = Buffer.concat(bufs);
+    if (mergedMp3.length > 2000) {
+      fs.writeFileSync(mp3Path, mergedMp3);
+      const dur = await getMediaDurationSec(mp3Path);
+      console.log(`[NarratorTTS] 🎙️ Cloud Fallback TTS (es-US) -> ${path.basename(mp3Path)} (${dur.toFixed(1)}s)`);
+      return { audioPath: mp3Path, durationSec: dur, provider: 'cloud-http-tts:es-US' };
+    }
+  } catch (err: any) {
+    lastErr = `${lastErr} | cloud-http-tts: ${err?.message || err}`;
   }
 
   throw new Error(`No se pudo generar narración TTS: ${lastErr}`);
