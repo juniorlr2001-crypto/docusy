@@ -1,0 +1,51 @@
+{
+  "usedIds": [
+    "alvarenga-438-dias",
+    "stanislav-petrov-1983",
+    "juliane-koepcke-amazonas",
+    "faro-islas-flannan"
+  ],
+  "usedWikiTitles": [
+    "jose_salvador_alvarenga",
+    "stanislav_petrov",
+    "juliane_koepcke",
+    "faro_de_las_islas_flannan"
+  ],
+  "usedTitles": [
+    "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
+    "el_hombre_que_desobedecio_una_alarma_nuclear_y_salvo_al_mundo_en_5_minutos",
+    "cayo_3_000_metros_desde_un_avion_partido_por_un_rayo_y_camino_11_dias_en_el_amazonas",
+    "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico"
+  ],
+  "lastCategory": "misterios",
+  "historyLog": [
+    {
+      "id": "alvarenga-438-dias",
+      "category": "supervivencia",
+      "wikiTitleEs": "José_Salvador_Alvarenga",
+      "titleSeed": "El hombre que sobrevivió 438 días a la deriva en el océano Pacífico",
+      "usedAt": "backfilled"
+    },
+    {
+      "id": "stanislav-petrov-1983",
+      "category": "errores_historicos",
+      "wikiTitleEs": "Stanislav_Petrov",
+      "titleSeed": "El hombre que desobedeció una alarma nuclear y salvó al mundo en 5 minutos",
+      "usedAt": "backfilled"
+    },
+    {
+      "id": "juliane-koepcke-amazonas",
+      "category": "supervivencia",
+      "wikiTitleEs": "Juliane_Koepcke",
+      "titleSeed": "Cayó 3,000 metros desde un avión partido por un rayo y caminó 11 días en el Amazonas",
+      "usedAt": "backfilled"
+    },
+    {
+      "id": "faro-islas-flannan",
+      "category": "misterios",
+      "wikiTitleEs": "Faro_de_las_islas_Flannan",
+      "titleSeed": "El misterio del faro vacío: 3 hombres desaparecieron sin dejar rastro en medio del Atlántico",
+      "usedAt": "2026-11-23T02:06:42.935Z"
+    }
+  ]
+}

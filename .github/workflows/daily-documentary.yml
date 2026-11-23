@@ -1,0 +1,97 @@
+name: Daily Documentary Generator & YouTube Auto-Upload
+
+on:
+  schedule:
+    # 21:00 UTC = 3:00 PM America/Mexico_City (UTC-6)
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Pilar opcional (supervivencia | errores_historicos | misterios | ciencia_extrema)'
+        required: false
+        default: ''
+      custom_topic:
+        description: 'Tema personalizado opcional (dejar vacío para rotación automática)'
+        required: false
+        default: ''
+      privacy:
+        description: 'Privacidad en YouTube (public | unlisted | private)'
+        required: false
+        default: 'public'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docu-viral-daily-production
+  cancel-in-progress: false
+
+jobs:
+  produce-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate 1080p Documentary + Bridge Short + Auto-Upload to YouTube
+        env:
+          DOCU_GEMINI_API_KEY: ${{ secrets.DOCU_GEMINI_API_KEY }}
+          DOCU_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.DOCU_CLOUDFLARE_ACCOUNT_ID }}
+          DOCU_CLOUDFLARE_API_TOKEN: ${{ secrets.DOCU_CLOUDFLARE_API_TOKEN }}
+          DOCU_PEXELS_API_KEY: ${{ secrets.DOCU_PEXELS_API_KEY }}
+          DOCU_PIXABAY_API_KEY: ${{ secrets.DOCU_PIXABAY_API_KEY }}
+          DOCU_FAL_KEY: ${{ secrets.DOCU_FAL_KEY }}
+          DOCU_YOUTUBE_CLIENT_ID: ${{ secrets.DOCU_YOUTUBE_CLIENT_ID }}
+          DOCU_YOUTUBE_CLIENT_SECRET: ${{ secrets.DOCU_YOUTUBE_CLIENT_SECRET }}
+          DOCU_YOUTUBE_REFRESH_TOKEN: ${{ secrets.DOCU_YOUTUBE_REFRESH_TOKEN }}
+          DOCU_YOUTUBE_PRIVACY: ${{ inputs.privacy || secrets.DOCU_YOUTUBE_PRIVACY || 'public' }}
+          DOCU_CHANNEL_NAME: ${{ secrets.DOCU_CHANNEL_NAME || 'Archivos Ocultos' }}
+          DOCU_AUTO_UPLOAD: 'true'
+          DOCU_CLEAN_WORK: 'true'
+        run: |
+          EXTRA_ARGS="--auto-upload --clean-work"
+          if [ -n "${{ inputs.category }}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --category=${{ inputs.category }}"
+          fi
+          if [ -n "${{ inputs.custom_topic }}" ]; then
+            npx tsx src/index.ts $EXTRA_ARGS "--topic=${{ inputs.custom_topic }}"
+          else
+            npx tsx src/index.ts $EXTRA_ARGS
+          fi
+
+      - name: Persist updated topic history back to repository (never repeat topics)
+        run: |
+          git config user.name "docu-viral-bot"
+          git config user.email "docu-viral-bot@users.noreply.github.com"
+          git add data/published_topics.json data/discovered_topics.json || true
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(radar): register published documentary episode [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload episode metadata & thumbnails artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode-package-${{ github.run_number }}
+          path: |
+            output/*/metadata.json
+            output/*/script.json
+            output/*/captions.srt
+            output/*/thumbnail_16x9.jpg
+            output/*/thumbnail_short_9x16.jpg
+          retention-days: 30

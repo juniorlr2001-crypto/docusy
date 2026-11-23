@@ -1,0 +1,31 @@
+{
+  "name": "docu-viral-engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generador automatizado 100% original de mini-documentales (8-10 min 16:9) + Shorts puente (9:16) + miniaturas de alto CTR para YouTube a costo $0.",
+  "scripts": {
+    "build": "tsc",
+    "generate": "tsx src/index.ts",
+    "generate:auto": "tsx src/index.ts --auto-upload",
+    "generate:cloud": "tsx src/index.ts --auto-upload --clean-work",
+    "generate:quick": "tsx src/index.ts --quick",
+    "list-topics": "tsx src/index.ts --list-topics",
+    "upload": "tsx src/uploadCli.ts",
+    "auth:youtube": "tsx src/youtubeAuthCli.ts"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.1",
+    "dotenv": "^16.4.5",
+    "fluent-ffmpeg": "^2.1.3",
+    "node-edge-tts": "^1.2.11",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^20.14.9",
+    "tsx": "^4.23.0",
+    "typescript": "^5.4.5"
+  }
+}
