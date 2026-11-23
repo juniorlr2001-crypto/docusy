@@ -76,25 +76,32 @@ async function runYouTubeOAuthSetup(): Promise<void> {
 
   const code = await new Promise<string>((resolve, reject) => {
     const server = http.createServer((req, res) => {
-      if (!req.url || !req.url.startsWith('/oauth2callback')) {
-        res.writeHead(404);
-        res.end('Not found');
+      if (!req.url || req.url === '/favicon.ico') {
+        res.writeHead(204);
+        res.end();
         return;
       }
       const urlObj = new URL(req.url, `http://localhost:${PORT}`);
       const authCode = urlObj.searchParams.get('code');
       const err = urlObj.searchParams.get('error');
 
+      // If user visits http://localhost:4815 or /oauth2callback directly without code/error, redirect them to Google OAuth!
+      if (!authCode && !err) {
+        res.writeHead(302, { Location: authUrl });
+        res.end();
+        return;
+      }
+
       if (err || !authCode) {
         res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end('<h2>❌ Autorización cancelada o inválida.</h2>');
+        res.end(`<h2>❌ Autorización cancelada: ${err}</h2>`);
         server.close();
         reject(new Error(err || 'No se recibió código OAuth'));
         return;
       }
 
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end('<h2>✅ Canal de YouTube conectado con éxito. Ya puedes cerrar esta pestaña.</h2>');
+      res.end('<h2>✅ Canal de YouTube (docusy) conectado con éxito. Ya puedes cerrar esta pestaña.</h2>');
       server.close();
       resolve(authCode);
     });
@@ -123,11 +130,7 @@ async function runYouTubeOAuthSetup(): Promise<void> {
 
   upsertEnvValue(envPath, 'DOCU_YOUTUBE_REFRESH_TOKEN', tokenData.refresh_token);
 
-  console.log('✅ DOCU_YOUTUBE_REFRESH_TOKEN guardado automáticamente en .env');
-  console.log('\n📋 Si vas a correrlo en GitHub Actions / Railway, copia estos 3 secrets:');
-  console.log(`   DOCU_YOUTUBE_CLIENT_ID=${clientId}`);
-  console.log(`   DOCU_YOUTUBE_CLIENT_SECRET=${clientSecret}`);
-  console.log(`   DOCU_YOUTUBE_REFRESH_TOKEN=${tokenData.refresh_token}\n`);
+  console.log('✅ DOCU_YOUTUBE_REFRESH_TOKEN guardado automáticamente en .env\n');
 }
 
 runYouTubeOAuthSetup().catch(err => {
