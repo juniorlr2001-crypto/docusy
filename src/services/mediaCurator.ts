@@ -565,9 +565,12 @@ export class EpisodeMediaCurator {
     const targetW = params.aspect === '16:9' ? 1920 : 1080;
     const targetH = params.aspect === '16:9' ? 1080 : 1920;
     const aspectCue = params.aspect === '16:9'
-      ? 'wide cinematic 16:9 documentary film frame, anamorphic lens'
-      : 'dramatic vertical 9:16 cinema framing';
-    const fullPrompt = `${params.promptEn}. ${params.styleGuideEn}. ${aspectCue}, 35mm documentary photography, dramatic volumetric chiaroscuro lighting, ultra sharp, NO text, NO letters, NO watermark, NO logos.`;
+      ? 'wide 16:9 horizontal framing, full head-to-shoulders subject visible inside frame'
+      : 'vertical 9:16 portrait framing';
+    const lightingCue = params.ignoreBudget
+      ? 'vibrant high-CTR YouTube documentary thumbnail lighting, bright key light on face and focal action, vivid golden-orange and cyan contrast, high clarity, NO dark empty voids'
+      : `${params.styleGuideEn}, 35mm documentary photography, volumetric cinematic lighting`;
+    const fullPrompt = `${params.promptEn}. ${lightingCue}, ${aspectCue}, ultra sharp 8k detail, NO text, NO letters, NO watermark, NO logos.`;
 
     try {
       const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(CONFIG.CLOUDFLARE_ACCOUNT_ID)}/ai/run/@cf/black-forest-labs/flux-1-schnell`;
@@ -577,7 +580,7 @@ export class EpisodeMediaCurator {
           Authorization: `Bearer ${CONFIG.CLOUDFLARE_API_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: fullPrompt, steps: 4 }),
+        body: JSON.stringify({ prompt: fullPrompt, steps: params.ignoreBudget ? 8 : 6 }),
         signal: AbortSignal.timeout(45_000),
       });
 

@@ -213,9 +213,9 @@ REQUISITOS ESTRICTOS DEL STORYBOARD VISUAL CINEMATOGRÁFICO (CRÍTICO):
    - "keyQuoteEs": solo en 1 o 2 planos clímax por capítulo: frase corta demoledora de 4 a 8 palabras.
 10. "primaryMapSpec": mapa principal del episodio con coordenadas reales exactas (lat/lon numéricas).
 11. "bridgeShort": guion vertical 9:16 de 38 a 48 segundos (95 a 120 palabras) ultra atrapante con 8 búsquedas de video vertical atmosférico EN INGLÉS ("videoSearchQueries") y 3 prompts heroicos verticales ("visualPromptsEn"), invitando al final a ver el documental completo en ${CONFIG.CHANNEL_NAME}.
-12. "thumbnailHeadline": 2 a 4 PALABRAS EN MAYÚSCULAS ultra impactantes.
-13. "thumbnailStatBadge": dato corto explosivo opcional para esquina de miniatura (ej. "10,800 KM", "1983", "-30°C").
-14. "thumbnailPromptEn": póster cinematográfico de alto presupuesto 16:9 EN INGLÉS acorde a esta historia, alto contraste, sujeto dramático monumental a la derecha y espacio limpio oscuro a la izquierda (SIN texto, SIN letras).
+12. "thumbnailHeadline": 2 a 4 PALABRAS CORTAS EN MAYÚSCULAS de máxima intriga (curiosity gap) que NO repitan literal el título sino que provoquen clic inmediato (ej. "NADIE VOLVIÓ", "¿QUÉ Había ABAJO?", "5 MINUTOS", "CAYÓ VIVA", "438 DÍAS SOLO").
+13. "thumbnailStatBadge": dato corto explosivo obligatorio para esquina de miniatura (ej. "10,800 KM", "AÑO 1900", "-30°C", "3,000 M").
+14. "thumbnailPromptEn": miniatura de YouTube estilo documental viral de altísimo CTR (16:9 EN INGLÉS): DEBE tener un PROTAGONISTA HUMANO en primer plano o plano medio a la derecha (rostro expresivo hiperrealista con emoción intensa: asombro, miedo, supervivencia, sudor, lluvia o reflejo de luz en los ojos) + el elemento visual del desastre/misterio brillantemente iluminado detrás (avión partiéndose con fuego, ola monstruosa golpeando el faro encendido, pantalla roja nuclear, abismo iluminado). Iluminación HDR vibrante y brillante (fuerte luz cálida dorada/ámbar/roja contrastando con azul/esmeralda vivo), CERO fondos negros vacíos, SIN texto, SIN letras.
 
 DEVUELVE EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
 {

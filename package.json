@@ -12,7 +12,8 @@
     "generate:quick": "tsx src/index.ts --quick",
     "list-topics": "tsx src/index.ts --list-topics",
     "upload": "tsx src/uploadCli.ts",
-    "auth:youtube": "tsx src/youtubeAuthCli.ts"
+    "auth:youtube": "tsx src/youtubeAuthCli.ts",
+    "regen-thumbnails": "tsx src/regenThumbnailsCli.ts"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
