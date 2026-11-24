@@ -222,9 +222,6 @@ export async function uploadEpisodeBundleToYouTube(
   };
 }> {
   const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-  const epDir = path.dirname(metadataPath);
-  const shortThumbCandidate =
-    meta?.files?.shortThumbnail || path.join(epDir, 'thumbnail_short_9x16.jpg');
   const privacy =
     options?.privacyStatus ||
     ((CONFIG.YOUTUBE_PRIVACY as 'public' | 'unlisted' | 'private') || 'unlisted');
@@ -244,24 +241,15 @@ export async function uploadEpisodeBundleToYouTube(
     `[YouTubeUploader] ✅ Documental 16:9 publicado: ${docuRes.url} (miniatura=${docuRes.thumbnailAttached}, srt=${docuRes.captionsAttached}, comentario=${docuRes.commentPosted})`
   );
 
-  const shortDescWithLink = `${meta.bridgeShort.description}\n\n🎬 Documental completo: ${docuRes.url}`;
-  const shortComment = `🎬 Mira el documental completo en nuestro canal: ${docuRes.url}\n\n💬 ${
-    meta.youtube.pinnedComment || ''
-  }`.trim();
-
   console.log(`[YouTubeUploader] 📱 Subiendo Short puente 9:16 (${privacy}): "${meta.bridgeShort.title}"...`);
   const shortRes = await uploadVideoToYouTube({
     videoPath: meta.files.bridgeShort,
     title: meta.bridgeShort.title,
-    description: shortDescWithLink,
+    description: meta.bridgeShort.description,
     tags: Array.from(new Set([...(meta.youtube.tags || []), 'Shorts'])),
-    thumbnailPath: fs.existsSync(shortThumbCandidate) ? shortThumbCandidate : undefined,
-    firstCommentText: shortComment,
     privacyStatus: privacy,
   });
-  console.log(
-    `[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url} (miniatura=${shortRes.thumbnailAttached}, comentario=${shortRes.commentPosted})\n`
-  );
+  console.log(`[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url}\n`);
 
   meta.youtubeUpload = {
     uploadedAt: new Date().toISOString(),
