@@ -50,7 +50,25 @@ jobs:
           sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core fontconfig
           npm ci
 
+      - name: Guard daytime Mexico schedule & max 2 episodes per day
+        id: schedule_guard
+        run: |
+          MX_HOUR=$(TZ="America/Mexico_City" date +%H)
+          MX_DATE=$(TZ="America/Mexico_City" date +%Y-%m-%d)
+          echo "Hora actual en Ciudad de México: ${MX_DATE} ${MX_HOUR}:00"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Only allow scheduled runs during morning (08:00-12:59) or afternoon (14:00-18:59) Mexico City time.
+            # Blocks delayed GitHub cron backlog triggers late at night (e.g. 11 PM).
+            if [ "$MX_HOUR" -lt 8 ] || [ "$MX_HOUR" -ge 19 ]; then
+              echo "⏸️ Disparo atrasado de GitHub fuera de horario diurno (${MX_HOUR}:00 MX). Se omite para no publicar de noche."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
       - name: Generate 1080p Documentary + Bridge Short + Auto-Upload to YouTube
+        if: steps.schedule_guard.outputs.skip != 'true'
         env:
           DOCU_GEMINI_API_KEY: ${{ secrets.DOCU_GEMINI_API_KEY }}
           DOCU_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.DOCU_CLOUDFLARE_ACCOUNT_ID }}
@@ -77,6 +95,7 @@ jobs:
           fi
 
       - name: Persist updated topic history back to repository (never repeat topics)
+        if: steps.schedule_guard.outputs.skip != 'true'
         run: |
           git config user.name "docu-viral-bot"
           git config user.email "docu-viral-bot@users.noreply.github.com"
