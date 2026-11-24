@@ -875,50 +875,8 @@ export async function assembleBridgeShortVideo(params: {
     cursor += segDur;
   }
 
-  const rawStitchedShort = path.join(shortDir, 'short_video_1080p_raw.mp4');
-  await concatFilesWithDemuxer(captionedSegments, path.join(shortDir, 'short_cap_list.txt'), rawStitchedShort, false);
-
-  let stitchedShort = rawStitchedShort;
-  // Stamp the 9:16 poster at 0s, 25%, 50% (YouTube's default Short thumbnail timestamp!), and 75% without altering duration or audio sync!
-  if (shortThumbnailPath && fs.existsSync(shortThumbnailPath)) {
-    const stampedShort = path.join(shortDir, 'short_video_1080p_only.mp4');
-    const t25 = Math.max(1, shortDurationSec * 0.25);
-    const t50 = Math.max(2, shortDurationSec * 0.50);
-    const t75 = Math.max(3, shortDurationSec * 0.75);
-    const enableExpr = [
-      'between(t,0,0.20)',
-      `between(t,${(t25 - 0.18).toFixed(2)},${(t25 + 0.18).toFixed(2)})`,
-      `between(t,${(t50 - 0.22).toFixed(2)},${(t50 + 0.22).toFixed(2)})`,
-      `between(t,${(t75 - 0.18).toFixed(2)},${(t75 + 0.18).toFixed(2)})`,
-    ].join('+');
-
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg()
-        .input(rawStitchedShort)
-        .input(shortThumbnailPath)
-        .inputOptions(['-loop 1', `-t ${shortDurationSec.toFixed(3)}`])
-        .complexFilter(
-          `[1:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS},setsar=1[poster];[0:v][poster]overlay=0:0:enable='${enableExpr}':shortest=1,format=yuv420p[outv]`,
-          'outv'
-        )
-        .outputOptions([
-          '-y',
-          '-c:v libx264',
-          '-preset veryfast',
-          '-crf 20',
-          `-r ${FPS}`,
-          `-video_track_timescale ${timescale}`,
-          '-an',
-        ])
-        .output(stampedShort)
-        .on('end', () => resolve())
-        .on('error', err => reject(err))
-        .run();
-    });
-    if (fs.existsSync(stampedShort)) {
-      stitchedShort = stampedShort;
-    }
-  }
+  const stitchedShort = path.join(shortDir, 'short_video_1080p_only.mp4');
+  await concatFilesWithDemuxer(captionedSegments, path.join(shortDir, 'short_cap_list.txt'), stitchedShort, false);
 
   // 3. Mix Short audio: voice + sidechain-ducked Zimmer tension score + opening BRAAAM impact!
   await mixDocumentaryCinemaAudio({
