@@ -2,16 +2,12 @@ name: Daily Documentary Generator & YouTube Auto-Upload
 
 on:
   schedule:
-    # === TANDA MAÑANA (Objetivo: publicado entre 8:45 AM y 10:00 AM America/Mexico_City, UTC-6) ===
-    # 3 disparos en minutos fuera de hora pico (:17, :47, :23) con deduplicación automática:
-    # el primero que corra publica el episodio de la mañana y los otros 2 se omiten en 1 segundo.
-    - cron: '17 14 * * *'
-    - cron: '47 14 * * *'
-    - cron: '23 15 * * *'
-    # === TANDA TARDE (Objetivo: publicado entre 2:45 PM y 4:00 PM America/Mexico_City, UTC-6) ===
-    - cron: '17 20 * * *'
-    - cron: '47 20 * * *'
-    - cron: '23 21 * * *'
+    # Dispara cada 30 minutos (:17 y :47) durante las ventanas diurnas de Ciudad de México (UTC-6):
+    # - Tanda Mañana: 9:17 AM en adelante (15:17 UTC) -> publica 1 episodio en la mañana y omite los respaldos en 2s.
+    # - Tanda Tarde:  3:17 PM en adelante (21:17 UTC) -> publica 1 episodio en la tarde y omite los respaldos en 2s.
+    # IMPORTANTE: El historial se guarda en la rama `radar-state` (NUNCA en `main`) para que GITHUB_TOKEN jamás desactive el cron de `main`.
+    - cron: '17,47 15-19 * * *'
+    - cron: '17,47 21-23,0-1 * * *'
   workflow_dispatch:
     inputs:
       category:
@@ -45,6 +41,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Load latest topic history from radar-state branch
+        run: |
+          if git ls-remote --exit-code --heads origin radar-state >/dev/null 2>&1; then
+            git fetch origin radar-state
+            git checkout origin/radar-state -- data/ || true
+            git reset HEAD data/ || true
+          fi
+
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -68,17 +72,18 @@ jobs:
             console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute}`);
 
             if (eventName === "schedule") {
-              if (mxHour < 7 || mxHour >= 20) {
+              if (mxHour < 9 || mxHour >= 20) {
                 console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
                 fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                 process.exit(0);
               }
-              const isMorning = mxHour < 14;
+              const isMorning = mxHour < 15;
               try {
                 const hist = JSON.parse(fs.readFileSync("data/published_topics.json", "utf8"));
                 const log = Array.isArray(hist.historyLog) ? hist.historyLog : [];
                 let todayCount = 0;
                 let morningCount = 0;
+                let afternoonCount = 0;
                 for (const entry of log) {
                   if (!entry.usedAt || entry.usedAt === "backfilled") continue;
                   const d = new Date(entry.usedAt);
@@ -88,7 +93,8 @@ jobs:
                   const eHour = parseInt(ep.hour, 10);
                   if (eDate === mxDate) {
                     todayCount++;
-                    if (eHour < 14) morningCount++;
+                    if (eHour < 15) morningCount++;
+                    else afternoonCount++;
                   }
                 }
                 if (todayCount >= 2) {
@@ -98,6 +104,11 @@ jobs:
                 }
                 if (isMorning && morningCount >= 1) {
                   console.log(`✅ Ya se publicó el episodio de la mañana (${mxDate}). Omitiendo disparo de respaldo matutino.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+                if (!isMorning && afternoonCount >= 1 && todayCount >= 2) {
+                  console.log(`✅ Ya se publicó el episodio de la tarde (${mxDate}). Omitiendo disparo de respaldo vespertino.`);
                   fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                   process.exit(0);
                 }
@@ -143,7 +154,7 @@ jobs:
             npx tsx src/index.ts $EXTRA_ARGS
           fi
 
-      - name: Persist updated topic history back to repository (never repeat topics)
+      - name: Persist updated topic history to radar-state branch (keeps main untouched by GITHUB_TOKEN)
         if: steps.schedule_guard.outputs.skip != 'true'
         run: |
           git config user.name "juniorlr2001-crypto"
@@ -151,8 +162,7 @@ jobs:
           git add data/
           if ! git diff --staged --quiet; then
             git commit -m "chore(radar): register published documentary episode"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            git push origin "HEAD:refs/heads/radar-state" --force
           fi
 
       - name: Upload episode metadata & thumbnails artifact
