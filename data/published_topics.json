@@ -4,23 +4,27 @@
     "stanislav-petrov-1983",
     "juliane-koepcke-amazonas",
     "faro-islas-flannan",
-    "pozo-superprofundo-kola"
+    "pozo-superprofundo-kola",
+    "mars-climate-orbiter-unidades"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
     "stanislav_petrov",
     "juliane_koepcke",
     "faro_de_las_islas_flannan",
-    "pozo_superprofundo_de_kola"
+    "pozo_superprofundo_de_kola",
+    "misterio_de_las_islas_flannan",
+    "mars_climate_orbiter"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
     "el_hombre_que_desobedecio_una_alarma_nuclear_y_salvo_al_mundo_en_5_minutos",
     "cayo_3_000_metros_desde_un_avion_partido_por_un_rayo_y_camino_11_dias_en_el_amazonas",
     "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico",
-    "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra"
+    "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra",
+    "el_error_matematico_de_primaria_que_destruyo_una_nave_de_327_millones_en_marte"
   ],
-  "lastCategory": "ciencia_extrema",
+  "lastCategory": "errores_historicos",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -56,6 +60,13 @@
       "wikiTitleEs": "Pozo_superprofundo_de_Kola",
       "titleSeed": "Qué encontraron cuando perforaron el agujero más profundo de la Tierra",
       "usedAt": "2026-11-23T22:31:50.000Z"
+    },
+    {
+      "id": "mars-climate-orbiter-unidades",
+      "category": "errores_historicos",
+      "wikiTitleEs": "Mars_Climate_Orbiter",
+      "titleSeed": "El error matemático de primaria que destruyó una nave de 327 millones en Marte",
+      "usedAt": "2026-11-24T00:38:03.128Z"
     }
   ]
 }
