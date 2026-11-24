@@ -5,7 +5,8 @@
     "juliane-koepcke-amazonas",
     "faro-islas-flannan",
     "pozo-superprofundo-kola",
-    "mars-climate-orbiter-unidades"
+    "mars-climate-orbiter-unidades",
+    "mecanismo-anticitera"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -14,7 +15,8 @@
     "faro_de_las_islas_flannan",
     "pozo_superprofundo_de_kola",
     "misterio_de_las_islas_flannan",
-    "mars_climate_orbiter"
+    "mars_climate_orbiter",
+    "mecanismo_de_anticitera"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -22,9 +24,10 @@
     "cayo_3_000_metros_desde_un_avion_partido_por_un_rayo_y_camino_11_dias_en_el_amazonas",
     "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico",
     "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra",
-    "el_error_matematico_de_primaria_que_destruyo_una_nave_de_327_millones_en_marte"
+    "el_error_matematico_de_primaria_que_destruyo_una_nave_de_327_millones_en_marte",
+    "la_computadora_de_bronce_de_2_000_anos_que_no_deberia_haber_existido"
   ],
-  "lastCategory": "errores_historicos",
+  "lastCategory": "misterios",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -67,6 +70,13 @@
       "wikiTitleEs": "Mars_Climate_Orbiter",
       "titleSeed": "El error matemático de primaria que destruyó una nave de 327 millones en Marte",
       "usedAt": "2026-11-24T00:38:03.128Z"
+    },
+    {
+      "id": "mecanismo-anticitera",
+      "category": "misterios",
+      "wikiTitleEs": "Mecanismo_de_Anticitera",
+      "titleSeed": "La computadora de bronce de 2,000 años que no debería haber existido",
+      "usedAt": "2026-11-24T05:26:52.510Z"
     }
   ]
 }
