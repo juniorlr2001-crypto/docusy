@@ -6,7 +6,8 @@
     "faro-islas-flannan",
     "pozo-superprofundo-kola",
     "mars-climate-orbiter-unidades",
-    "mecanismo-anticitera"
+    "mecanismo-anticitera",
+    "fosa-de-las-marianas"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -16,7 +17,8 @@
     "pozo_superprofundo_de_kola",
     "misterio_de_las_islas_flannan",
     "mars_climate_orbiter",
-    "mecanismo_de_anticitera"
+    "mecanismo_de_anticitera",
+    "fosa_de_las_marianas"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -25,9 +27,10 @@
     "el_misterio_del_faro_vacio_3_hombres_desaparecieron_sin_dejar_rastro_en_medio_del_atlantico",
     "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra",
     "el_error_matematico_de_primaria_que_destruyo_una_nave_de_327_millones_en_marte",
-    "la_computadora_de_bronce_de_2_000_anos_que_no_deberia_haber_existido"
+    "la_computadora_de_bronce_de_2_000_anos_que_no_deberia_haber_existido",
+    "a_11_000_metros_bajo_el_mar_que_pasa_realmente_en_el_punto_mas_profundo_del_planeta"
   ],
-  "lastCategory": "misterios",
+  "lastCategory": "ciencia_extrema",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -77,6 +80,13 @@
       "wikiTitleEs": "Mecanismo_de_Anticitera",
       "titleSeed": "La computadora de bronce de 2,000 años que no debería haber existido",
       "usedAt": "2026-11-24T05:26:52.510Z"
+    },
+    {
+      "id": "fosa-de-las-marianas",
+      "category": "ciencia_extrema",
+      "wikiTitleEs": "Fosa_de_las_Marianas",
+      "titleSeed": "A 11,000 metros bajo el mar: qué pasa realmente en el punto más profundo del planeta",
+      "usedAt": "2026-11-24T21:07:44.614Z"
     }
   ]
 }
