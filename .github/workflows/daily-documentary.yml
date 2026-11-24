@@ -2,10 +2,16 @@ name: Daily Documentary Generator & YouTube Auto-Upload
 
 on:
   schedule:
-    # 15:00 UTC = 9:00 AM America/Mexico_City (UTC-6)
-    - cron: '0 15 * * *'
-    # 21:00 UTC = 3:00 PM America/Mexico_City (UTC-6)
-    - cron: '0 21 * * *'
+    # === TANDA MAÑANA (Objetivo: publicado entre 8:45 AM y 10:00 AM America/Mexico_City, UTC-6) ===
+    # 3 disparos en minutos fuera de hora pico (:17, :47, :23) con deduplicación automática:
+    # el primero que corra publica el episodio de la mañana y los otros 2 se omiten en 1 segundo.
+    - cron: '17 14 * * *'
+    - cron: '47 14 * * *'
+    - cron: '23 15 * * *'
+    # === TANDA TARDE (Objetivo: publicado entre 2:45 PM y 4:00 PM America/Mexico_City, UTC-6) ===
+    - cron: '17 20 * * *'
+    - cron: '47 20 * * *'
+    - cron: '23 21 * * *'
   workflow_dispatch:
     inputs:
       category:
@@ -45,27 +51,61 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Guard daytime Mexico schedule & deduplicate Morning/Afternoon slot
+        id: schedule_guard
+        run: |
+          node -e '
+            const fs = require("fs");
+            const eventName = process.env.GH_EVENT || "";
+            const fmt = new Intl.DateTimeFormat("en-CA", {
+              timeZone: "America/Mexico_City",
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit", hour12: false
+            });
+            const parts = Object.fromEntries(fmt.formatToParts(new Date()).map(p => [p.type, p.value]));
+            const mxDate = `${parts.year}-${parts.month}-${parts.day}`;
+            const mxHour = parseInt(parts.hour, 10);
+            console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute}`);
+
+            if (eventName === "schedule") {
+              if (mxHour < 7 || mxHour >= 20) {
+                console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
+                fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                process.exit(0);
+              }
+              const slot = mxHour < 14 ? "morning" : "afternoon";
+              try {
+                const hist = JSON.parse(fs.readFileSync("data/published_topics.json", "utf8"));
+                const log = Array.isArray(hist.historyLog) ? hist.historyLog : [];
+                const alreadyInSlot = log.some(entry => {
+                  if (!entry.usedAt || entry.usedAt === "backfilled") return false;
+                  const d = new Date(entry.usedAt);
+                  if (isNaN(d.getTime())) return false;
+                  const ep = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, p.value]));
+                  const eDate = `${ep.year}-${ep.month}-${ep.day}`;
+                  const eHour = parseInt(ep.hour, 10);
+                  const eSlot = eHour < 14 ? "morning" : "afternoon";
+                  return eDate === mxDate && eSlot === slot;
+                });
+                if (alreadyInSlot) {
+                  console.log(`✅ Ya se publicó el episodio de la tanda [${slot}] hoy (${mxDate}). Omitiendo disparo de respaldo.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+              } catch (e) {
+                console.warn("Aviso leyendo historial:", e.message);
+              }
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=false\n");
+          '
+        env:
+          GH_EVENT: ${{ github.event_name }}
+
       - name: Install dependencies & system fonts
+        if: steps.schedule_guard.outputs.skip != 'true'
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core fontconfig
           npm ci
-
-      - name: Guard daytime Mexico schedule & max 2 episodes per day
-        id: schedule_guard
-        run: |
-          MX_HOUR=$(TZ="America/Mexico_City" date +%H)
-          MX_DATE=$(TZ="America/Mexico_City" date +%Y-%m-%d)
-          echo "Hora actual en Ciudad de México: ${MX_DATE} ${MX_HOUR}:00"
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # Only allow scheduled runs during morning (08:00-12:59) or afternoon (14:00-18:59) Mexico City time.
-            # Blocks delayed GitHub cron backlog triggers late at night (e.g. 11 PM).
-            if [ "$MX_HOUR" -lt 8 ] || [ "$MX_HOUR" -ge 19 ]; then
-              echo "⏸️ Disparo atrasado de GitHub fuera de horario diurno (${MX_HOUR}:00 MX). Se omite para no publicar de noche."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
-          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Generate 1080p Documentary + Bridge Short + Auto-Upload to YouTube
         if: steps.schedule_guard.outputs.skip != 'true'
@@ -101,13 +141,13 @@ jobs:
           git config user.email "docu-viral-bot@users.noreply.github.com"
           git add data/
           if ! git diff --staged --quiet; then
-            git commit -m "chore(radar): register published documentary episode [skip ci]"
+            git commit -m "chore(radar): register published documentary episode"
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
       - name: Upload episode metadata & thumbnails artifact
-        if: always()
+        if: always() && steps.schedule_guard.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: episode-package-${{ github.run_number }}
