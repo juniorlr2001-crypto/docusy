@@ -73,22 +73,31 @@ jobs:
                 fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                 process.exit(0);
               }
-              const slot = mxHour < 14 ? "morning" : "afternoon";
+              const isMorning = mxHour < 14;
               try {
                 const hist = JSON.parse(fs.readFileSync("data/published_topics.json", "utf8"));
                 const log = Array.isArray(hist.historyLog) ? hist.historyLog : [];
-                const alreadyInSlot = log.some(entry => {
-                  if (!entry.usedAt || entry.usedAt === "backfilled") return false;
+                let todayCount = 0;
+                let morningCount = 0;
+                for (const entry of log) {
+                  if (!entry.usedAt || entry.usedAt === "backfilled") continue;
                   const d = new Date(entry.usedAt);
-                  if (isNaN(d.getTime())) return false;
+                  if (isNaN(d.getTime())) continue;
                   const ep = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, p.value]));
                   const eDate = `${ep.year}-${ep.month}-${ep.day}`;
                   const eHour = parseInt(ep.hour, 10);
-                  const eSlot = eHour < 14 ? "morning" : "afternoon";
-                  return eDate === mxDate && eSlot === slot;
-                });
-                if (alreadyInSlot) {
-                  console.log(`✅ Ya se publicó el episodio de la tanda [${slot}] hoy (${mxDate}). Omitiendo disparo de respaldo.`);
+                  if (eDate === mxDate) {
+                    todayCount++;
+                    if (eHour < 14) morningCount++;
+                  }
+                }
+                if (todayCount >= 2) {
+                  console.log(`✅ Ya se publicaron los 2 episodios del día (${mxDate}). Omitiendo disparo de respaldo.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+                if (isMorning && morningCount >= 1) {
+                  console.log(`✅ Ya se publicó el episodio de la mañana (${mxDate}). Omitiendo disparo de respaldo matutino.`);
                   fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                   process.exit(0);
                 }
