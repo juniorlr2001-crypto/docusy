@@ -2,6 +2,8 @@ name: Daily Documentary Generator & YouTube Auto-Upload
 
 on:
   schedule:
+    # 15:00 UTC = 9:00 AM America/Mexico_City (UTC-6)
+    - cron: '0 15 * * *'
     # 21:00 UTC = 3:00 PM America/Mexico_City (UTC-6)
     - cron: '0 21 * * *'
   workflow_dispatch:
