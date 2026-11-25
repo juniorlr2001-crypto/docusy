@@ -166,10 +166,19 @@ jobs:
         run: |
           git config user.name "juniorlr2001-crypto"
           git config user.email "262055082+juniorlr2001-crypto@users.noreply.github.com"
+          cp -r data /tmp/radar_data_updated
+          if git ls-remote --exit-code --heads origin radar-state >/dev/null 2>&1; then
+            git fetch origin radar-state
+            git checkout -B radar-state origin/radar-state
+          else
+            git checkout -b radar-state
+          fi
+          mkdir -p data
+          cp -r /tmp/radar_data_updated/* data/
           git add data/
           if ! git diff --staged --quiet; then
             git commit -m "chore(radar): register published documentary episode"
-            git push origin "HEAD:refs/heads/radar-state" --force
+            git push origin radar-state
           fi
 
       - name: Upload episode metadata & thumbnails artifact

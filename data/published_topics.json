@@ -7,7 +7,10 @@
     "pozo-superprofundo-kola",
     "mars-climate-orbiter-unidades",
     "mecanismo-anticitera",
-    "fosa-de-las-marianas"
+    "fosa-de-las-marianas",
+    "endurance-shackleton-antartida",
+    "puente-tacoma-narrows",
+    "senal-wow-1977"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -18,7 +21,10 @@
     "misterio_de_las_islas_flannan",
     "mars_climate_orbiter",
     "mecanismo_de_anticitera",
-    "fosa_de_las_marianas"
+    "fosa_de_las_marianas",
+    "expedicion_imperial_transantartica",
+    "puente_de_tacoma_(1940)",
+    "senal_wow"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -28,9 +34,12 @@
     "que_encontraron_cuando_perforaron_el_agujero_mas_profundo_de_la_tierra",
     "el_error_matematico_de_primaria_que_destruyo_una_nave_de_327_millones_en_marte",
     "la_computadora_de_bronce_de_2_000_anos_que_no_deberia_haber_existido",
-    "a_11_000_metros_bajo_el_mar_que_pasa_realmente_en_el_punto_mas_profundo_del_planeta"
+    "a_11_000_metros_bajo_el_mar_que_pasa_realmente_en_el_punto_mas_profundo_del_planeta",
+    "atrapados_en_el_hielo_de_la_antartida_sin_radio_el_rescate_imposible_del_endurance",
+    "el_dia_que_un_puente_de_acero_se_retorcio_como_papel_el_colapso_de_tacoma_narrows",
+    "los_72_segundos_que_desconcertaron_a_la_astronomia_el_enigma_de_la_senal_wow"
   ],
-  "lastCategory": "ciencia_extrema",
+  "lastCategory": "misterios",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -87,6 +96,27 @@
       "wikiTitleEs": "Fosa_de_las_Marianas",
       "titleSeed": "A 11,000 metros bajo el mar: qué pasa realmente en el punto más profundo del planeta",
       "usedAt": "2026-11-24T21:07:44.614Z"
+    },
+    {
+      "id": "endurance-shackleton-antartida",
+      "category": "supervivencia",
+      "wikiTitleEs": "Expedición_Imperial_Transantártica",
+      "titleSeed": "Atrapados en el hielo de la Antártida sin radio: el rescate imposible del Endurance",
+      "usedAt": "2026-11-24T22:51:11.694Z"
+    },
+    {
+      "id": "puente-tacoma-narrows",
+      "category": "errores_historicos",
+      "wikiTitleEs": "Puente_de_Tacoma_(1940)",
+      "titleSeed": "El día que un puente de acero se retorció como papel: el colapso de Tacoma Narrows",
+      "usedAt": "2026-11-25T18:08:50.000Z"
+    },
+    {
+      "id": "senal-wow-1977",
+      "category": "misterios",
+      "wikiTitleEs": "Señal_Wow!",
+      "titleSeed": "Los 72 segundos que desconcertaron a la astronomía: el enigma de la Señal Wow",
+      "usedAt": "2026-11-25T22:01:45.000Z"
     }
   ]
 }
