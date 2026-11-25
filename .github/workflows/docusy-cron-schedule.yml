@@ -1,26 +1,166 @@
-name: Docusy 9AM & 3PM Auto-Publish Schedule
+name: Docusy 9AM & 3PM Cloud Cron Auto-Publish
 
 on:
   schedule:
-    # === TANDA MAÑANA (9:07 AM - 11:07 AM America/Mexico_City, UTC-6) ===
-    # El primer disparo publica el episodio matutino; los respaldos se omiten en 2 segundos vía schedule_guard.
-    - cron: '7 15 * * *'
-    - cron: '37 15 * * *'
-    - cron: '7 16 * * *'
-    - cron: '37 16 * * *'
-    - cron: '7 17 * * *'
-    # === TANDA TARDE (3:07 PM - 5:07 PM America/Mexico_City, UTC-6) ===
-    # El primer disparo publica el episodio vespertino; los respaldos se omiten en 2 segundos vía schedule_guard.
-    - cron: '7 21 * * *'
-    - cron: '37 21 * * *'
-    - cron: '7 22 * * *'
-    - cron: '37 22 * * *'
-    - cron: '7 23 * * *'
+    # === TANDA MAÑANA (9:00 AM - 11:00 AM America/Mexico_City, UTC-6) ===
+    # El primer disparo en ejecutarse publica el episodio de la mañana; los respaldos se omiten en 2s.
+    - cron: '0 15 * * *'
+    - cron: '25 15 * * *'
+    - cron: '50 15 * * *'
+    - cron: '20 16 * * *'
+    - cron: '50 16 * * *'
+    # === TANDA TARDE (3:00 PM - 5:00 PM America/Mexico_City, UTC-6) ===
+    # El primer disparo en ejecutarse publica el episodio de la tarde; los respaldos se omiten en 2s.
+    - cron: '0 21 * * *'
+    - cron: '25 21 * * *'
+    - cron: '52 21 * * *'
+    - cron: '20 22 * * *'
+    - cron: '50 22 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: docu-viral-daily-production
+  cancel-in-progress: false
+
 jobs:
-  scheduled-episode:
-    uses: ./.github/workflows/daily-documentary.yml
-    secrets: inherit
+  produce-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load latest topic history from radar-state branch
+        run: |
+          if git ls-remote --exit-code --heads origin radar-state >/dev/null 2>&1; then
+            git fetch origin radar-state
+            git checkout origin/radar-state -- data/ || true
+            git reset HEAD data/ || true
+          fi
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Guard daytime Mexico schedule & deduplicate Morning/Afternoon slot
+        id: schedule_guard
+        run: |
+          node -e '
+            const fs = require("fs");
+            const eventName = process.env.GH_EVENT || "";
+            const fmt = new Intl.DateTimeFormat("en-CA", {
+              timeZone: "America/Mexico_City",
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit", hour12: false
+            });
+            const parts = Object.fromEntries(fmt.formatToParts(new Date()).map(p => [p.type, p.value]));
+            const mxDate = `${parts.year}-${parts.month}-${parts.day}`;
+            const mxHour = parseInt(parts.hour, 10);
+            console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute} | evento=${eventName}`);
+
+            if (eventName === "schedule") {
+              if (mxHour < 8 || mxHour >= 21) {
+                console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
+                fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                process.exit(0);
+              }
+              const isMorning = mxHour < 15;
+              try {
+                const hist = JSON.parse(fs.readFileSync("data/published_topics.json", "utf8"));
+                const log = Array.isArray(hist.historyLog) ? hist.historyLog : [];
+                let todayCount = 0;
+                let morningCount = 0;
+                let afternoonCount = 0;
+                for (const entry of log) {
+                  if (!entry.usedAt || entry.usedAt === "backfilled") continue;
+                  const d = new Date(entry.usedAt);
+                  if (isNaN(d.getTime())) continue;
+                  const ep = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, p.value]));
+                  const eDate = `${ep.year}-${ep.month}-${ep.day}`;
+                  const eHour = parseInt(ep.hour, 10);
+                  if (eDate === mxDate) {
+                    todayCount++;
+                    if (eHour < 15) morningCount++;
+                    else afternoonCount++;
+                  }
+                }
+                if (todayCount >= 2) {
+                  console.log(`✅ Ya se publicaron los 2 episodios del día (${mxDate}). Omitiendo disparo de respaldo.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+                if (isMorning && morningCount >= 1) {
+                  console.log(`✅ Ya se publicó el episodio de la mañana (${mxDate}). Omitiendo disparo de respaldo matutino.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+                if (!isMorning && afternoonCount >= 1) {
+                  console.log(`✅ Ya se publicó el episodio de la tarde (${mxDate}). Omitiendo disparo de respaldo vespertino.`);
+                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+                  process.exit(0);
+                }
+              } catch (e) {
+                console.warn("Aviso leyendo historial:", e.message);
+              }
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=false\n");
+          '
+        env:
+          GH_EVENT: ${{ github.event_name }}
+
+      - name: Install dependencies & system fonts
+        if: steps.schedule_guard.outputs.skip != 'true'
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core fontconfig
+          npm ci
+
+      - name: Generate 1080p Documentary + Bridge Short + Auto-Upload to YouTube
+        if: steps.schedule_guard.outputs.skip != 'true'
+        env:
+          DOCU_GEMINI_API_KEY: ${{ secrets.DOCU_GEMINI_API_KEY }}
+          DOCU_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.DOCU_CLOUDFLARE_ACCOUNT_ID }}
+          DOCU_CLOUDFLARE_API_TOKEN: ${{ secrets.DOCU_CLOUDFLARE_API_TOKEN }}
+          DOCU_PEXELS_API_KEY: ${{ secrets.DOCU_PEXELS_API_KEY }}
+          DOCU_PIXABAY_API_KEY: ${{ secrets.DOCU_PIXABAY_API_KEY }}
+          DOCU_FAL_KEY: ${{ secrets.DOCU_FAL_KEY }}
+          DOCU_YOUTUBE_CLIENT_ID: ${{ secrets.DOCU_YOUTUBE_CLIENT_ID }}
+          DOCU_YOUTUBE_CLIENT_SECRET: ${{ secrets.DOCU_YOUTUBE_CLIENT_SECRET }}
+          DOCU_YOUTUBE_REFRESH_TOKEN: ${{ secrets.DOCU_YOUTUBE_REFRESH_TOKEN }}
+          DOCU_YOUTUBE_PRIVACY: 'public'
+          DOCU_CHANNEL_NAME: 'docusy'
+          DOCU_AUTO_UPLOAD: 'true'
+          DOCU_CLEAN_WORK: 'true'
+        run: |
+          npx tsx src/index.ts --auto-upload --clean-work
+
+      - name: Persist updated topic history to radar-state branch (keeps main untouched by GITHUB_TOKEN)
+        if: steps.schedule_guard.outputs.skip != 'true'
+        run: |
+          git config user.name "juniorlr2001-crypto"
+          git config user.email "262055082+juniorlr2001-crypto@users.noreply.github.com"
+          git add data/
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(radar): register published documentary episode"
+            git push origin "HEAD:refs/heads/radar-state" --force
+          fi
+
+      - name: Upload episode metadata & thumbnails artifact
+        if: always() && steps.schedule_guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode-package-cron-${{ github.run_number }}
+          path: |
+            output/*/metadata.json
+            output/*/script.json
+            output/*/captions.srt
+            output/*/thumbnail_16x9.jpg
+            output/*/thumbnail_short_9x16.jpg
+          retention-days: 30
