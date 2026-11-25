@@ -187,17 +187,17 @@ export async function generateDocumentaryScript(
 ): Promise<DocumentaryScript> {
   const isQuick = Boolean(options.quickMode);
   const chapterCount = isQuick ? 2 : 6;
-  const beatsPerChapter = isQuick ? 6 : 10;
-  const wordsPerChapter = isQuick ? '75 a 95' : '225 a 260';
+  const beatsPerChapter = isQuick ? 6 : 12;
+  const wordsPerChapter = isQuick ? '75 a 95' : '215 a 245';
   const totalTargetWords = isQuick
     ? '160 a 190 palabras (~1 min)'
-    : '1,400 a 1,550 palabras (8.5 a 10 minutos exactos al narrar)';
+    : '1,320 a 1,460 palabras (8.5 a 9.5 minutos de alta densidad sin relleno)';
 
   const factsBlock = topic.verifiedFacts
     ? topic.verifiedFacts.slice(0, 4200)
     : 'Usa únicamente hechos históricos y científicos ampliamente verificados y reconocidos. No inventes cifras falsas ni nombres ficticios.';
 
-  const prompt = `Eres guionista jefe y director de fotografía de documentales cinematográficos de alto presupuesto (calidad película de cine IMAX 70mm / National Geographic / Netflix / Lemmino) en español para YouTube.
+  const prompt = `Eres guionista jefe y director de fotografía de documentales cinematográficos de alto presupuesto (calidad película de cine IMAX 70mm / National Geographic / Netflix / Lemmino / Fern) en español para YouTube.
 
 TEMA VERIFICADO:
 - Título semilla: ${topic.titleSeed}
@@ -209,40 +209,46 @@ DOSSIER DE HECHOS REALES (Wikipedia):
 ${factsBlock}
 
 TAREA:
-Escribe un guion documental 100% ORIGINAL en español latinoamericano neutro con narrativa tensa, cinematográfica y rigor histórico/científico, acompañado de un STORYBOARD VISUAL DE ALTA RETENCIÓN con IDENTIDAD VISUAL PROPIA adaptada exactamente al mundo, clima y época de esta historia (NO repitas una estética genérica igual para todos los temas).
+Escribe un guion documental 100% ORIGINAL en español latinoamericano neutro con narrativa tensa, ritmo ágil sin relleno, rigor histórico/científico y un STORYBOARD VISUAL DE ALTA RETENCIÓN (72 planos, cortes cada ~6-7 segundos) con IDENTIDAD VISUAL PROPIA adaptada exactamente al mundo, clima y época de esta historia.
 
 REQUISITOS ESTRICTOS DE NARRACIÓN:
 1. Extensión total: ${totalTargetWords}, dividido en exactamente ${chapterCount} capítulos (actos).
-2. Cada capítulo DEBE tener ${wordsPerChapter} palabras de narración fluida, visceral y envolvente (sin muletillas, sin listas secas, sin asteriscos, sin markdown ni acotaciones entre paréntesis).
-3. Capítulo 1: Abre IN MEDIAS RES en el segundo 0 con el momento más tenso e impactante. PROHIBIDO saludar ("Hola bienvenidos", "En este video veremos").
-4. Cada capítulo (excepto el último) cierra con un giro o frase puente de intriga imposible de ignorar.
-5. Último capítulo: resolución real verificada + reflexión humana memorable + pregunta abierta natural para debate en comentarios.
+2. Cada capítulo DEBE tener ${wordsPerChapter} palabras de narración fluida, visceral y directa al grano (CERO relleno poético repetitivo, sin muletillas, sin listas secas, sin asteriscos, sin markdown ni acotaciones entre paréntesis).
+3. Capítulo 1 (COLD OPEN DE MÁXIMA RETENCIÓN): Abre IN MEDIAS RES en el segundo 0.0 con la cifra, paradoja o instante exacto del desastre/hallazgo (ej. la hora exacta, la profundidad exacta, la alerta sonando). En los primeros 20 segundos plantea la pregunta central irresoluble que obliga a quedarse hasta el final. PROHIBIDO saludar ("Hola bienvenidos", "En este video veremos").
+4. Cada capítulo (excepto el último) cierra con un giro de guion ("micro-cliffhanger") o dato revelador que conecte con el siguiente acto.
+5. Último capítulo: resolución real verificada + dato final escalofriante + pregunta corta y debatible para comentarios.
 
 REQUISITOS ESTRICTOS DEL STORYBOARD VISUAL CINEMATOGRÁFICO (CRÍTICO):
 6. Elige el "colorLook" que mejor represente la fotografía natural de ESTA historia específica:
-   - "ocean_noir" (mar, tormentas oceánicas, naufragios, faros)
+   - "ocean_noir" (mar, tormentas oceánicas, naufragios, faros, abismos submarinos)
    - "jungle_emerald" (selva, Amazonas, cuevas tropicales, expediciones verdes)
    - "arctic_steel" (hielo, Antártida, nieve, montañas heladas, expediciones polares)
    - "coldwar_tungsten" (búnkeres, Guerra Fría, ciencia industrial, accidentes de ingeniería)
    - "cosmos_gold" (espacio, Marte, astronomía, radiación solar, ciencia extrema)
    - "vintage_sepia" (siglos pasados, artefactos antiguos, barcos históricos, archivos clásicos)
-7. Cada capítulo DEBE tener exactamente ${beatsPerChapter} planos visuales ("scenes") para lograr ritmo de cine real (cortes cada 7-9 segundos, NUNCA imágenes pegadas 25 segundos).
-8. Distribuye los tipos visuales ("visualType") en cada capítulo de manera variada y orgánica:
-   - ~5 a 6 planos "video_broll": metraje real en movimiento HD (tormentas, olas, lluvia, niebla, nieve, selva aérea, radar, noche estrellada, océano, pasillos, nubes, fuego).
-     * "videoSearchQueries": array de exactamente 3 búsquedas cortas EN INGLÉS (2 a 4 palabras) MUY ATMOSFÉRICAS y específicas para videos stock cinematográficos coherentes con ESTA historia. PROHIBIDO buscar personas sonriendo, turistas, oficinas, conferencias de prensa, micrófonos o escenas genéricas de ciudad alegre.
+7. Cada capítulo DEBE tener exactamente ${beatsPerChapter} planos visuales ("scenes") para lograr ritmo documental moderno de alta retención (cortes cada ~6-7 segundos, JAMÁS imágenes estáticas largas).
+8. Distribuye los tipos visuales ("visualType") en cada capítulo de manera variada y dinámica:
+   - ~7 a 8 planos "video_broll": metraje real en movimiento HD (tormentas, olas, lluvia, niebla, nieve, selva aérea, radar, noche estrellada, océano, submarino, laboratorio, fuego, acero).
+     * "videoSearchQueries": array de exactamente 3 búsquedas cortas EN INGLÉS (2 a 3 palabras simples y concretas, ej. "submarine underwater dark", "suspension bridge wind", "arctic ice ship") para videos stock cinematográficos coherentes con ESTA historia. PROHIBIDO buscar playas soleadas, turistas, oficinas modernas, personas sonriendo o conferencias.
    - ~2 planos "ai_cinema": los 2 momentos heroicos más dramáticos del capítulo.
-     * "visualPromptEn": prompt cinematográfico hiperdetallado EN INGLÉS con calidad de largometraje IMAX 70mm, iluminación naturalista acorde a la época y entorno real de esta historia, lentes anamórficos, profundidad atmosférica, grano fílmico, SIN texto, SIN letras, SIN watermarks.
-   - 1 plano "stat_dossier": cifra, fecha o dato clave verificado del capítulo (ej. "438 DÍAS", "10,800 KM", "26 SEP 1983", "327 MILLONES") con "statOverlay": { "eyebrow", "value", "label", "detail" }.
-   - En 1 o 2 capítulos clave (especialmente donde haya ruta geográfica o ubicación crucial), incluye 1 plano "animated_map" con coordenadas reales EXACTAS ("mapSpec": { "title", "from": { "name", "lat", "lon" }, "to": { "name", "lat", "lon" } opcional, "distanceLabel", "dateLabel" }).
-   - En 1 o 2 capítulos del documental puedes incluir 1 plano "archival_evidence" para mostrar fotografía histórica real de archivo (Wikimedia).
-9. Etiquetas cinematográficas opcionales (úsalas con elegancia, NO en todos los planos):
-   - "locationStamp": solo en 1 plano por capítulo cuando cambie el lugar o la fecha (ej. "CHIAPAS, MÉXICO · 17 NOV 2012").
-   - "keyQuoteEs": solo en 1 o 2 planos clímax por capítulo: frase corta demoledora de 4 a 8 palabras.
+     * "visualPromptEn": prompt cinematográfico hiperdetallado EN INGLÉS con calidad de largometraje IMAX 70mm, iluminación realista acorde a la época y entorno real de esta historia, lentes anamórficos, profundidad atmosférica, grano fílmico 35mm, SIN texto, SIN letras, SIN watermarks.
+   - 1 plano "stat_dossier": cifra, fecha o medición clave verificada del capítulo (ej. "438 DÍAS", "10,935 M", "26 SEP 1983", "$327 MILLONES") con "statOverlay": { "eyebrow", "value", "label", "detail" }.
+   - En al menos 2 capítulos incluye 1 plano "animated_map" con coordenadas reales EXACTAS ("mapSpec": { "title", "from": { "name", "lat", "lon" }, "to": { "name", "lat", "lon" } opcional, "distanceLabel", "dateLabel" }).
+   - En al menos 2 capítulos incluye 1 plano "archival_evidence" para mostrar fotografía histórica real de archivo (Wikimedia Commons).
+9. Etiquetas cinematográficas:
+   - "locationStamp": en 1 o 2 planos por capítulo cuando cambie el lugar, la hora o la fecha (ej. "ESTRECHO DE PUGET · 7 NOV 1940 · 11:00 AM").
+   - "keyQuoteEs": en 2 planos clímax por capítulo: frase corta demoledora de 3 a 7 palabras.
 10. "primaryMapSpec": mapa principal del episodio con coordenadas reales exactas (lat/lon numéricas).
-11. "bridgeShort": guion vertical 9:16 de 38 a 48 segundos (95 a 120 palabras) ultra atrapante con 8 búsquedas de video vertical atmosférico EN INGLÉS ("videoSearchQueries") y 3 prompts heroicos verticales ("visualPromptsEn"), invitando al final a ver el documental completo en ${CONFIG.CHANNEL_NAME}.
-12. "thumbnailHeadline": 2 a 4 PALABRAS CORTAS EN MAYÚSCULAS de máxima intriga (curiosity gap) que NO repitan literal el título sino que provoquen clic inmediato (ej. "NADIE VOLVIÓ", "¿QUÉ Había ABAJO?", "5 MINUTOS", "CAYÓ VIVA", "438 DÍAS SOLO").
-13. "thumbnailStatBadge": dato corto explosivo obligatorio para esquina de miniatura (ej. "10,800 KM", "AÑO 1900", "-30°C", "3,000 M").
-14. "thumbnailPromptEn": miniatura de YouTube estilo documental viral de altísimo CTR (16:9 EN INGLÉS): DEBE tener un PROTAGONISTA HUMANO en primer plano o plano medio a la derecha (rostro expresivo hiperrealista con emoción intensa: asombro, miedo, supervivencia, sudor, lluvia o reflejo de luz en los ojos) + el elemento visual del desastre/misterio brillantemente iluminado detrás (avión partiéndose con fuego, ola monstruosa golpeando el faro encendido, pantalla roja nuclear, abismo iluminado). Iluminación HDR vibrante y brillante (fuerte luz cálida dorada/ámbar/roja contrastando con azul/esmeralda vivo), CERO fondos negros vacíos, SIN texto, SIN letras.
+11. "bridgeShort" (DISEÑO VIRAL FASE 2 — LOOP INFINITO DE 34 A 40 SEGUNDOS):
+    - "narrationEs": 85 a 102 palabras exactas (34 a 40 segundos).
+    - Estructura obligatoria para romper el techo de 1,250 vistas y lograr >100% de retención:
+      * Segundos 0-3 (GANCHO ANTI-SWIPE): Arranca con el dato físico o suceso más imposible y directo en la primera frase (PROHIBIDO introducciones lentas).
+      * Segundos 3-32 (ESCALADA RÁPIDA): 4 giros cortos de alta tensión con cifras concretas.
+      * Segundos 32-38 (LOOP CIRCULAR INFINITO — PROHIBIDO DESPEDIRSE): PROHIBIDO decir "Mira el documental completo en nuestro canal" o "Suscríbete" en la voz narrada (eso hace que la gente deslice antes del final; el aviso visual ya sale en pantalla automáticamente). En su lugar, termina la última oración con el misterio o giro más inquietante redactado de forma que CONECTE GRAMATICALMENTE con la primera frase del segundo 0:00 (efecto bucle/loop infinito).
+    - Incluye 12 búsquedas cortas de video vertical EN INGLÉS ("videoSearchQueries") y 3 prompts heroicos verticales ("visualPromptsEn").
+12. "thumbnailHeadline": 2 a 3 PALABRAS ULTRA CORTAS EN MAYÚSCULAS (máximo 15 caracteres en total, máximo 8-9 letras por palabra) de máxima intriga específica para ESTE caso (ej. "12 KM ABAJO", "NADIE VOLVIÓ", "SOLA 11 DÍAS", "ERROR FATAL", "0% OXÍGENO", "5 MINUTOS", "HIELO MORTAL"). PROHIBIDO usar textos largos o repetir "¿QUÉ HABÍA ABAJO?".
+13. "thumbnailStatBadge": dato corto explosivo obligatorio para esquina de miniatura (máx 11 caracteres, ej. "10,935 M", "AÑO 1900", "-35°C", "3,000 M", "$327M NASA").
+14. "thumbnailPromptEn": póster documental 16:9 estilo Netflix / National Geographic IMAX 70mm EN INGLÉS con COMPOSICIÓN REGLA DE TERCIOS: el sujeto principal (estructura colapsando, sumergible en el abismo iluminado, barco atrapado en hielo gigante o protagonista histórico en plano medio de perfil) DEBE estar ubicado limpiamente en el LADO DERECHO del encuadre (tercio derecho), dejando el LADO IZQUIERDO con atmósfera oscura limpia para el texto. Fotografía cinematográfica realista 70mm, iluminación natural dramática, tonos de piel reales (PROHIBIDO aspecto de caricatura o piel naranja neón saturada), SIN texto, SIN letras.
 
 DEVUELVE EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
 {
@@ -414,19 +420,21 @@ DEVUELVE EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
     : normalizedChapters[0].scenes.slice(0, 3).map((sc: any) => sc.visualPromptEn);
 
   const shortVidQueries = Array.isArray(rawShort.videoSearchQueries) && rawShort.videoSearchQueries.length >= 4
-    ? rawShort.videoSearchQueries.slice(0, 9).map((s: any) => String(s).trim()).filter(Boolean)
+    ? rawShort.videoSearchQueries.slice(0, 14).map((s: any) => String(s).trim()).filter(Boolean)
     : normalizedChapters
         .flatMap((c: any) => c.scenes.map((sc: any) => sc.videoSearchQueries[0]))
         .filter(Boolean)
-        .slice(0, 8);
+        .slice(0, 14);
 
   const shortPexels = Array.isArray(rawShort.pexelsFallbackQueries) && rawShort.pexelsFallbackQueries.length >= 3
-    ? rawShort.pexelsFallbackQueries.slice(0, 6).map((s: any) => String(s).trim())
-    : shortVidQueries.slice(0, 4);
+    ? rawShort.pexelsFallbackQueries.slice(0, 8).map((s: any) => String(s).trim())
+    : shortVidQueries.slice(0, 6);
 
-  const shortNarration = String(rawShort.narrationEs || normalizedChapters[0].narrationEs.slice(0, 580))
+  // Strip any spoken outro commercial ("Mira el documental completo...", "Suscríbete...") so the Short maintains a 100% seamless loop
+  const shortNarration = String(rawShort.narrationEs || normalizedChapters[0].narrationEs.slice(0, 520))
     .replace(/\[[^\]]*\]/g, '')
     .replace(/\*\*|\*/g, '')
+    .replace(/(?:Si quieres conocer|Para conocer|Mira|Descubre|Encuentra)\s+(?:la historia completa|el documental completo|toda la verdad)[^.!?]*[.!?]?$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
 

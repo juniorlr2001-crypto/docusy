@@ -556,7 +556,7 @@ export class EpisodeMediaCurator {
       }
     }
 
-    if (this.cloudflareQuotaExhausted) return null;
+    if (!params.ignoreBudget && this.cloudflareQuotaExhausted) return null;
     if (!CONFIG.CLOUDFLARE_ACCOUNT_ID || !CONFIG.CLOUDFLARE_API_TOKEN) return null;
     if (!params.ignoreBudget && this.aiImagesGenerated >= CONFIG.MAX_AI_IMAGES_PER_EPISODE) {
       return null;
@@ -565,70 +565,85 @@ export class EpisodeMediaCurator {
     const targetW = params.aspect === '16:9' ? 1920 : 1080;
     const targetH = params.aspect === '16:9' ? 1080 : 1920;
     const aspectCue = params.aspect === '16:9'
-      ? 'wide 16:9 horizontal framing, full head-to-shoulders subject visible inside frame'
+      ? 'wide 16:9 horizontal cinema framing, main focal subject positioned on the right side of the frame'
       : 'vertical 9:16 portrait framing';
     const lightingCue = params.ignoreBudget
-      ? 'vibrant high-CTR YouTube documentary thumbnail lighting, bright key light on face and focal action, vivid golden-orange and cyan contrast, high clarity, NO dark empty voids'
+      ? 'authentic 70mm IMAX documentary poster lighting, crisp rim light on right-side subject, dark atmospheric negative space on the left for typography, natural realistic skin texture, high contrast, NO cartoon look'
       : `${params.styleGuideEn}, 35mm documentary photography, volumetric cinematic lighting`;
     const fullPrompt = `${params.promptEn}. ${lightingCue}, ${aspectCue}, ultra sharp 8k detail, NO text, NO letters, NO watermark, NO logos.`;
 
-    try {
-      const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(CONFIG.CLOUDFLARE_ACCOUNT_ID)}/ai/run/@cf/black-forest-labs/flux-1-schnell`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${CONFIG.CLOUDFLARE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: fullPrompt, steps: params.ignoreBudget ? 8 : 6 }),
-        signal: AbortSignal.timeout(45_000),
-      });
-
-      if (res.status === 429 || res.status === 401 || res.status === 403) {
-        const errTxt = await res.text().catch(() => '');
-        this.cloudflareQuotaExhausted = true;
-        console.warn(
-          `[MediaCurator] 🚨 Cloudflare AI desactivado para el resto del episodio (HTTP ${res.status}): ${errTxt.slice(0, 160)}. Se usará video HD real en movimiento en su lugar (CERO fotos stock aleatorias).`
-        );
-        return null;
-      }
-
-      if (!res.ok) {
-        const errTxt = await res.text().catch(() => '');
-        console.warn(`[MediaCurator] ⚠️ Cloudflare FLUX HTTP ${res.status}: ${errTxt.slice(0, 140)}`);
-        return null;
-      }
-
-      let rawBuf: Buffer | null = null;
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.startsWith('image/')) {
-        rawBuf = Buffer.from(await res.arrayBuffer());
-      } else if (contentType.includes('application/json')) {
-        const json: any = await res.json();
-        const b64 = json?.result?.image;
-        if (typeof b64 === 'string' && b64.length > 1000) {
-          rawBuf = Buffer.from(b64, 'base64');
+    const maxAttempts = params.ignoreBudget ? 3 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (attempt > 1) {
+          await new Promise(r => setTimeout(r, attempt * 3000));
         }
+        const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(CONFIG.CLOUDFLARE_ACCOUNT_ID)}/ai/run/@cf/black-forest-labs/flux-1-schnell`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${CONFIG.CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: fullPrompt, steps: params.ignoreBudget ? 8 : 6 }),
+          signal: AbortSignal.timeout(45_000),
+        });
+
+        if (res.status === 429 || res.status === 401 || res.status === 403) {
+          const errTxt = await res.text().catch(() => '');
+          if (attempt < maxAttempts) {
+            console.warn(`[MediaCurator] ⏳ Reintentando miniatura IA Cloudflare (${attempt}/${maxAttempts})...`);
+            continue;
+          }
+          this.cloudflareQuotaExhausted = true;
+          console.warn(
+            `[MediaCurator] 🚨 Cloudflare AI desactivado para el resto del episodio (HTTP ${res.status}): ${errTxt.slice(0, 160)}. Se usará video HD real en movimiento en su lugar (CERO fotos stock aleatorias).`
+          );
+          return null;
+        }
+
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => '');
+          console.warn(`[MediaCurator] ⚠️ Cloudflare FLUX HTTP ${res.status}: ${errTxt.slice(0, 140)}`);
+          if (attempt < maxAttempts) continue;
+          return null;
+        }
+
+        let rawBuf: Buffer | null = null;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.startsWith('image/')) {
+          rawBuf = Buffer.from(await res.arrayBuffer());
+        } else if (contentType.includes('application/json')) {
+          const json: any = await res.json();
+          const b64 = json?.result?.image;
+          if (typeof b64 === 'string' && b64.length > 1000) {
+            rawBuf = Buffer.from(b64, 'base64');
+          }
+        }
+
+        if (!rawBuf || rawBuf.length < 8000) {
+          if (attempt < maxAttempts) continue;
+          return null;
+        }
+
+        fs.mkdirSync(path.dirname(params.outPath), { recursive: true });
+        await sharp(rawBuf)
+          .resize(targetW, targetH, { fit: 'cover', position: 'center', kernel: 'lanczos3' })
+          .modulate({ saturation: 1.04 })
+          .jpeg({ quality: 93, mozjpeg: true })
+          .toFile(params.outPath);
+
+        this.aiImagesGenerated++;
+        console.log(
+          `[MediaCurator] 🎨 IA Hero (${this.aiImagesGenerated}/${CONFIG.MAX_AI_IMAGES_PER_EPISODE}): ${path.basename(params.outPath)}`
+        );
+        return { path: params.outPath, provider: 'cloudflare-flux-1-schnell' };
+      } catch (err: any) {
+        console.warn(`[MediaCurator] ⚠️ Cloudflare FLUX error: ${err?.message || err}`);
+        if (attempt >= maxAttempts) return null;
       }
-
-      if (!rawBuf || rawBuf.length < 8000) return null;
-
-      fs.mkdirSync(path.dirname(params.outPath), { recursive: true });
-      await sharp(rawBuf)
-        .resize(targetW, targetH, { fit: 'cover', position: 'center', kernel: 'lanczos3' })
-        .modulate({ saturation: 1.05 })
-        .jpeg({ quality: 93, mozjpeg: true })
-        .toFile(params.outPath);
-
-      this.aiImagesGenerated++;
-      console.log(
-        `[MediaCurator] 🎨 IA Hero (${this.aiImagesGenerated}/${CONFIG.MAX_AI_IMAGES_PER_EPISODE}): ${path.basename(params.outPath)}`
-      );
-      return { path: params.outPath, provider: 'cloudflare-flux-1-schnell' };
-    } catch (err: any) {
-      console.warn(`[MediaCurator] ⚠️ Cloudflare FLUX error: ${err?.message || err}`);
-      return null;
     }
+    return null;
   }
 
   /**
@@ -892,18 +907,28 @@ export class EpisodeMediaCurator {
   }
 
   /**
-   * Curates 8 fast-paced vertical 9:16 assets for the Bridge Short (real HD vertical video + optional map/AI hero).
+   * Curates 13-15 rapid-fire vertical 9:16 assets (~2.6-3.0s per cut!) for the Bridge Short:
+   * - Mixes vertical AI hero hooks, vertical animated map, archival evidence, fresh vertical 9:16 HD video clips,
+   *   and crisp 1080p HD video beats from the episode so viewers get a visual change every ~2.7 seconds.
    */
   async curateBridgeShortAssets(params: {
     script: DocumentaryScript;
     workDir: string;
+    existingBeatAssets?: CuratedBeatAsset[];
   }): Promise<CuratedBeatAsset[]> {
-    const { script, workDir } = params;
+    const { script, workDir, existingBeatAssets = [] } = params;
     const vidQueries = script.bridgeShort.videoSearchQueries?.length
       ? script.bridgeShort.videoSearchQueries
       : script.bridgeShort.pexelsFallbackQueries || [];
     const prompts = script.bridgeShort.visualPromptsEn || [];
-    const totalSlots = Math.max(6, Math.min(9, Math.max(vidQueries.length, 7)));
+    const totalSlots = Math.max(12, Math.min(15, Math.max(vidQueries.length, 13)));
+
+    const reusableVideos = existingBeatAssets.filter(
+      a => a.mediaKind === 'video' && a.filePath && fs.existsSync(a.filePath)
+    );
+    const reusableImages = existingBeatAssets.filter(
+      a => a.mediaKind === 'image' && a.filePath && fs.existsSync(a.filePath) && !a.provider.includes('procedural')
+    );
 
     const assets: CuratedBeatAsset[] = [];
     for (let i = 0; i < totalSlots; i++) {
@@ -911,7 +936,7 @@ export class EpisodeMediaCurator {
       const vidOut = path.join(workDir, 'videos_9x16', `short_vid_${slotNum}.mp4`);
       const imgOut = path.join(workDir, 'scenes_9x16', `short_scene_${slotNum}.jpg`);
 
-      // Place vertical animated map at slot 3 if mapSpec exists!
+      // Place vertical animated map at slot 3 (~5.5s in) if mapSpec exists!
       if (i === 2 && (script.bridgeShort.mapSpec?.from || script.primaryMapSpec?.from)) {
         assets.push({
           sceneNumber: slotNum,
@@ -922,10 +947,11 @@ export class EpisodeMediaCurator {
         continue;
       }
 
-      // Slot 1 (opening hook): try AI hero or crisp HD vertical video
-      if (i === 0 && prompts[0]) {
+      // Slot 1 (0.0s opening hook) or Slot 7 (mid-point reveal): try vertical AI hero or archival image
+      if ((i === 0 && prompts[0]) || (i === 6 && prompts[1])) {
+        const promptToUse = i === 0 ? prompts[0] : prompts[1];
         const aiHook = await this.tryGenerateHeroAiImage({
-          promptEn: prompts[0],
+          promptEn: promptToUse,
           styleGuideEn: script.visualStyleGuideEn,
           aspect: '9:16',
           outPath: imgOut,
@@ -939,6 +965,19 @@ export class EpisodeMediaCurator {
           });
           continue;
         }
+      }
+
+      // For odd rapid-cut B-roll slots after slot 5, interleave already-downloaded HD moving video beats for speed + variety
+      if (i >= 5 && i % 2 === 1 && reusableVideos.length > 0) {
+        const picked = reusableVideos[(i * 3) % reusableVideos.length];
+        assets.push({
+          sceneNumber: slotNum,
+          mediaKind: 'video',
+          filePath: picked.filePath,
+          durationSec: picked.durationSec,
+          provider: `reused-hd:${picked.provider}`,
+        });
+        continue;
       }
 
       const q = vidQueries[i % Math.max(1, vidQueries.length)] || 'dark stormy ocean waves';
@@ -956,6 +995,23 @@ export class EpisodeMediaCurator {
           filePath: vid.path,
           durationSec: vid.durationSec,
           provider: vid.provider,
+        });
+      } else if (reusableVideos.length > 0) {
+        const picked = reusableVideos[i % reusableVideos.length];
+        assets.push({
+          sceneNumber: slotNum,
+          mediaKind: 'video',
+          filePath: picked.filePath,
+          durationSec: picked.durationSec,
+          provider: `reused-hd:${picked.provider}`,
+        });
+      } else if (reusableImages.length > 0) {
+        const picked = reusableImages[i % reusableImages.length];
+        assets.push({
+          sceneNumber: slotNum,
+          mediaKind: 'image',
+          filePath: picked.filePath,
+          provider: `reused-img:${picked.provider}`,
         });
       } else {
         const fallbackImg = await this.generateDarkProceduralBackdrop(imgOut, '9:16');

@@ -333,7 +333,7 @@ function mixDocumentaryCinemaAudio(params: {
 
   // Cap SFX trigger events cleanly so filtergraph remains snappy
   const braaamEvents = params.chapterStartSecs.slice(0, 8);
-  const whooshEvents = params.whooshSecs.slice(0, 10);
+  const whooshEvents = params.whooshSecs.slice(0, 16);
 
   const filterParts: string[] = [];
   filterParts.push(
@@ -504,7 +504,13 @@ export async function assembleDocumentaryVideo(params: {
       const pad = String(sc.sceneNumber).padStart(2, '0');
       const clipPath = path.join(clipsDir, `beat_${pad}.mp4`);
 
-      if ((asset.mediaKind === 'animated_map' && asset.mapSpec) || (asset.mediaKind === 'stat_dossier' && asset.statOverlay)) {
+      const hasVisualCardOrEvidence =
+        (asset.mediaKind === 'animated_map' && asset.mapSpec) ||
+        (asset.mediaKind === 'stat_dossier' && asset.statOverlay) ||
+        asset.provider.includes('wikimedia') ||
+        Boolean(sc.locationStamp) ||
+        Boolean(sc.keyQuoteEs);
+      if (!isChapterFirst && hasVisualCardOrEvidence) {
         whooshSecs.push(beatCursor);
       }
 
@@ -878,14 +884,21 @@ export async function assembleBridgeShortVideo(params: {
   const stitchedShort = path.join(shortDir, 'short_video_1080p_only.mp4');
   await concatFilesWithDemuxer(captionedSegments, path.join(shortDir, 'short_cap_list.txt'), stitchedShort, false);
 
-  // 3. Mix Short audio: voice + sidechain-ducked Zimmer tension score + opening BRAAAM impact!
+  // 3. Mix Short audio: voice + sidechain-ducked Zimmer tension score + opening & midpoint BRAAAM impacts + transition whoosh on every visual cut!
+  const shortCutWhooshes: number[] = [];
+  for (let c = 1; c < bgClipPaths.length; c++) {
+    const cutSec = Number((c * perBgSec).toFixed(2));
+    if (cutSec > 0.4 && cutSec < shortDurationSec - 0.5) {
+      shortCutWhooshes.push(cutSec);
+    }
+  }
   await mixDocumentaryCinemaAudio({
     stitchedVideoPath: stitchedShort,
     stitchedVoicePath: shortAudioPath,
     musicPath,
     sfx,
-    chapterStartSecs: [0.02],
-    whooshSecs: [shortDurationSec * 0.35],
+    chapterStartSecs: [0.02, Number((shortDurationSec * 0.52).toFixed(2))],
+    whooshSecs: shortCutWhooshes,
     totalVoiceDur: shortDurationSec,
     outputVideoPath: outputShortPath,
   });

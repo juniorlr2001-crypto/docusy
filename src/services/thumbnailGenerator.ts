@@ -50,19 +50,20 @@ function outlinedPosterText(opts: {
   fill: string;
 }): string {
   const safe = escXml(opts.text);
-  const sw = Math.max(14, Math.round(opts.fontSize * 0.17));
+  const sw = Math.max(12, Math.round(opts.fontSize * 0.16));
   return [
-    `<text x="${opts.x + 6}" y="${opts.y + 12}" fill="#000000" fill-opacity="0.88" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="2.5">${safe}</text>`,
-    `<text x="${opts.x}" y="${opts.y}" fill="none" stroke="#000000" stroke-width="${sw}" stroke-linejoin="round" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="2.5">${safe}</text>`,
-    `<text x="${opts.x}" y="${opts.y}" fill="${opts.fill}" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="2.5">${safe}</text>`,
+    `<text x="${opts.x + 5}" y="${opts.y + 10}" fill="#000000" fill-opacity="0.88" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="1.5">${safe}</text>`,
+    `<text x="${opts.x}" y="${opts.y}" fill="none" stroke="#000000" stroke-width="${sw}" stroke-linejoin="round" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="1.5">${safe}</text>`,
+    `<text x="${opts.x}" y="${opts.y}" fill="${opts.fill}" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${opts.fontSize}" font-weight="900" letter-spacing="1.5">${safe}</text>`,
   ].join('');
 }
 
 /**
- * Generates a high-CTR Viral Documentary 1280x720 YouTube thumbnail (<2MB JPEG):
- * - Bright HDR subject + human emotion/action on the right 62% of frame
- * - Vibrant contrast (warm golden/crimson key light + rich color saturation so it pops on YouTube dark mode)
- * - Always-stacked 2-line giant typography (white + electric yellow) + glowing red tag + top-right stat badge
+ * Thumbnail Engine 2.0 (Netflix / Lemmino / Veritasium High-CTR Edition):
+ * - Strict Rule-of-Thirds layout: Typography stays within the left 52% (x=68..680) so it NEVER covers faces or focal subjects on the right!
+ * - Auto-scaling top-right stat badge that NEVER overflows its yellow border box (even for 14-16 char strings like "12,262 METROS").
+ * - Authentic photorealistic 70mm cinema color grading (no burnt neon-orange cartoon skin).
+ * - Multi-attempt AI generation with dedicated retry so thumbnails never fall back to unrelated stock beaches.
  */
 export async function generateDocumentaryThumbnail(
   script: DocumentaryScript,
@@ -85,7 +86,7 @@ export async function generateDocumentaryThumbnail(
 
   if (!bgReady) {
     const aiBg = await curator.tryGenerateHeroAiImage({
-      promptEn: `High-CTR viral YouTube documentary thumbnail: ${script.thumbnailPromptEn}. Close-up dramatic human subject or intense action focal point on the right side of the frame, vivid bright HDR lighting, intense warm golden-orange and crimson rim light contrasting with vibrant teal/cobalt atmosphere, ultra-sharp eyes and facial expression, high luminosity, 8k photorealistic cinema, NO pitch-black empty backgrounds`,
+      promptEn: `Netflix / National Geographic IMAX 70mm documentary poster frame: ${script.thumbnailPromptEn}. Rule-of-thirds composition: main focal subject or dramatic historical scene positioned cleanly on the RIGHT side of the frame (right 55% of canvas), darker atmospheric negative space on the LEFT side (left 40% of canvas) for title placement. Authentic photorealistic cinema photography, natural realistic skin texture and lighting, dramatic volumetric rim light, ultra-sharp focus, 8k detail, NO cartoon or painted look, NO oversaturated orange skin, NO text, NO letters, NO watermarks`,
       styleGuideEn: script.visualStyleGuideEn,
       aspect: '16:9',
       outPath: bgPath,
@@ -96,7 +97,13 @@ export async function generateDocumentaryThumbnail(
     }
   }
 
-  // Fallback 2: extract real dramatic frame from curated documentary video clip
+  // Fallback 2: reuse best hero AI scene image before ever touching generic stock video
+  if (!bgReady && options?.fallbackImagePath && fs.existsSync(options.fallbackImagePath)) {
+    fs.copyFileSync(options.fallbackImagePath, bgPath);
+    bgReady = true;
+  }
+
+  // Fallback 3: extract real dramatic frame from curated documentary video clip
   if (!bgReady && options?.fallbackVideoPath && fs.existsSync(options.fallbackVideoPath)) {
     try {
       await extractFrameFromVideo(options.fallbackVideoPath, bgPath);
@@ -107,12 +114,6 @@ export async function generateDocumentaryThumbnail(
     } catch {
       // fall through
     }
-  }
-
-  // Fallback 3: reuse best hero scene image
-  if (!bgReady && options?.fallbackImagePath && fs.existsSync(options.fallbackImagePath)) {
-    fs.copyFileSync(options.fallbackImagePath, bgPath);
-    bgReady = true;
   }
 
   // Emergency offline canvas
@@ -131,78 +132,93 @@ export async function generateDocumentaryThumbnail(
   }
 
   const [line1, line2] = splitHeadlineLines(script.thumbnailHeadline);
-  const badgeText = escXml((script.thumbnailSubBadge || 'EXPEDIENTE REAL').toUpperCase().slice(0, 26));
-  const statBadge = script.thumbnailStatBadge
-    ? escXml(script.thumbnailStatBadge.toUpperCase().slice(0, 16))
+  const rawSubBadge = (script.thumbnailSubBadge || 'EXPEDIENTE REAL').toUpperCase().trim().slice(0, 24);
+  const badgeText = escXml(rawSubBadge);
+  const rawStatBadge = script.thumbnailStatBadge
+    ? script.thumbnailStatBadge.toUpperCase().trim().slice(0, 16)
     : '';
+  const statBadge = escXml(rawStatBadge);
 
+  // Strict width cap: keep headline inside the left 52% of the frame (max ~610px width)
+  // so it NEVER covers faces or focal objects on the right half of the thumbnail!
   const maxChars = Math.max(line1.length, line2.length, 5);
-  const fontSize = maxChars <= 7 ? 144 : maxChars <= 10 ? 124 : maxChars <= 13 ? 106 : 92;
-  const line1Y = line2 ? 385 : 445;
+  const fittedByWidth = Math.floor(610 / (maxChars * 0.65));
+  const fontSize = Math.min(128, Math.max(68, fittedByWidth));
+  const line1Y = line2 ? 410 : 465;
   const line2Y = line1Y + Math.round(fontSize * 1.08);
 
-  // High-CTR electric yellow (#FFE600) or vibrant red (#FF3B30) for line 2 — maximum eye magnet on YouTube
+  // High-CTR electric yellow (#FFE600) or vibrant red (#FF3B30) for line 2
   const accentColor = script.mood === 'tension' ? '#FF3B30' : '#FFE600';
 
-  const statPillW = statBadge ? Math.min(360, Math.max(210, statBadge.length * 24 + 60)) : 0;
-  const statPillSvg = statBadge
-    ? `<rect x="${1232 - statPillW}" y="42" width="${statPillW}" height="70" rx="14" fill="#000000" fill-opacity="0.88" stroke="${accentColor}" stroke-width="4"/>
-       <text x="${1232 - statPillW / 2}" y="89" text-anchor="middle" fill="${accentColor}" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="38" font-weight="900" letter-spacing="2.5">${statBadge}</text>`
+  // Auto-fitting top-right stat pill: dynamically adjusts font-size and width so text NEVER overflows the box
+  const statFontSize = rawStatBadge.length > 13 ? 29 : rawStatBadge.length > 10 ? 32 : 36;
+  const statPillW = rawStatBadge
+    ? Math.min(470, Math.max(210, Math.round(rawStatBadge.length * (statFontSize * 0.72) + 64)))
+    : 0;
+  const statPillX = 1236 - statPillW;
+  const statPillSvg = rawStatBadge
+    ? `<rect x="${statPillX}" y="40" width="${statPillW}" height="68" rx="14" fill="#020617" fill-opacity="0.90" stroke="${accentColor}" stroke-width="4"/>
+       <text x="${Math.round(statPillX + statPillW / 2)}" y="${Math.round(40 + 34 + statFontSize * 0.36)}" text-anchor="middle" fill="${accentColor}" font-family="Arial Black, Liberation Sans, Impact, Segoe UI, sans-serif" font-size="${statFontSize}" font-weight="900" letter-spacing="1.5">${statBadge}</text>`
     : '';
+
+  const subBadgeFontSize = rawSubBadge.length > 18 ? 23 : 25;
+  const subBadgeW = Math.min(540, Math.max(240, Math.round(rawSubBadge.length * (subBadgeFontSize * 0.70) + 56)));
+  const barTopY = line2 ? 228 : 280;
+  const barHeight = line2 ? Math.round(fontSize * 2.25 + 88) : Math.round(fontSize * 1.25 + 88);
 
   const overlaySvg = `<svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="leftScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#020617" stop-opacity="0.82"/>
-        <stop offset="34%" stop-color="#020617" stop-opacity="0.48"/>
-        <stop offset="56%" stop-color="#020617" stop-opacity="0.06"/>
+        <stop offset="0%" stop-color="#020617" stop-opacity="0.88"/>
+        <stop offset="36%" stop-color="#020617" stop-opacity="0.54"/>
+        <stop offset="56%" stop-color="#020617" stop-opacity="0.05"/>
         <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
       </linearGradient>
       <linearGradient id="bottomScrim" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" stop-color="#020617" stop-opacity="0.58"/>
-        <stop offset="26%" stop-color="#020617" stop-opacity="0"/>
+        <stop offset="0%" stop-color="#020617" stop-opacity="0.62"/>
+        <stop offset="28%" stop-color="#020617" stop-opacity="0"/>
       </linearGradient>
-      <radialGradient id="subjectGlow" cx="74%" cy="46%" r="50%">
-        <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.18"/>
-        <stop offset="60%" stop-color="#38BDF8" stop-opacity="0.06"/>
+      <radialGradient id="subjectGlow" cx="76%" cy="46%" r="48%">
+        <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.12"/>
+        <stop offset="60%" stop-color="#38BDF8" stop-opacity="0.05"/>
         <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
       </radialGradient>
     </defs>
 
-    <!-- Subtle subject spotlight + localized left text contrast scrim (keeps 70%+ of image bright & vivid) -->
+    <!-- Subtle subject spotlight + localized left text contrast scrim (keeps right subject 100% clean & sharp) -->
     <rect width="1280" height="720" fill="url(#subjectGlow)"/>
     <rect width="1280" height="720" fill="url(#leftScrim)"/>
     <rect width="1280" height="720" fill="url(#bottomScrim)"/>
 
     <!-- Left high-impact accent bar -->
-    <rect x="44" y="154" width="14" height="${line2 ? 390 : 265}" rx="7" fill="${accentColor}"/>
+    <rect x="42" y="${barTopY}" width="12" height="${barHeight}" rx="6" fill="${accentColor}"/>
 
     <!-- Top high-contrast crimson badge -->
-    <rect x="76" y="154" width="${Math.min(560, Math.max(250, badgeText.length * 22 + 60))}" height="62" rx="12" fill="#E11D48" stroke="#FFFFFF" stroke-width="2.5"/>
-    <text x="104" y="195" fill="#FFFFFF" font-family="Arial Black, Impact, Segoe UI, sans-serif" font-size="27" font-weight="900" letter-spacing="2.5">${badgeText}</text>
+    <rect x="68" y="${barTopY}" width="${subBadgeW}" height="56" rx="11" fill="#E11D48" stroke="#FFFFFF" stroke-width="2.2"/>
+    <text x="${Math.round(68 + subBadgeW / 2)}" y="${Math.round(barTopY + 28 + subBadgeFontSize * 0.36)}" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, Liberation Sans, Impact, Segoe UI, sans-serif" font-size="${subBadgeFontSize}" font-weight="900" letter-spacing="2">${badgeText}</text>
 
-    <!-- Massive dual-stroked 2-line poster headline -->
-    ${outlinedPosterText({ x: 76, y: line1Y, text: line1, fontSize, fill: '#FFFFFF' })}
-    ${line2 ? outlinedPosterText({ x: 76, y: line2Y, text: line2, fontSize, fill: accentColor }) : ''}
+    <!-- Compact left-zone dual-stroked 2-line poster headline (never crosses over the right-side focal subject) -->
+    ${outlinedPosterText({ x: 68, y: line1Y, text: line1, fontSize, fill: '#FFFFFF' })}
+    ${line2 ? outlinedPosterText({ x: 68, y: line2Y, text: line2, fontSize, fill: accentColor }) : ''}
 
-    <!-- Top-right high-CTR stat pill -->
+    <!-- Top-right auto-fitted high-CTR stat pill -->
     ${statPillSvg}
 
     <!-- High-visibility frame border bar -->
-    <rect x="0" y="706" width="1280" height="14" fill="${accentColor}"/>
+    <rect x="0" y="708" width="1280" height="12" fill="${accentColor}"/>
   </svg>`;
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   await sharp(bgPath)
-    .resize(1280, 720, { fit: 'cover', position: 'center', kernel: 'lanczos3' })
-    .modulate({ brightness: 1.18, saturation: 1.32 })
-    .linear(1.16, -4)
-    .sharpen({ sigma: 1.25 })
+    .resize(1280, 720, { fit: 'cover', position: 'east', kernel: 'lanczos3' })
+    .modulate({ brightness: 1.07, saturation: 1.12 })
+    .linear(1.08, -3)
+    .sharpen({ sigma: 1.15 })
     .composite([{ input: Buffer.from(overlaySvg), top: 0, left: 0 }])
     .jpeg({ quality: 94, mozjpeg: true })
     .toFile(outputPath);
 
-  console.log(`[Thumbnail] 🖼️ Póster IMAX 16:9 generado en: ${outputPath}`);
+  console.log(`[Thumbnail] 🖼️ Póster IMAX 16:9 v2.0 generado en: ${outputPath}`);
   return outputPath;
 }
 
@@ -224,9 +240,8 @@ export async function generateShortThumbnail(
 
   const bgPath = candidates[0];
   const [line1, line2] = splitHeadlineLines(script.thumbnailHeadline);
-  const badgeText = escXml(
-    (script.thumbnailStatBadge || script.thumbnailSubBadge || 'HISTORIA REAL').toUpperCase().slice(0, 22)
-  );
+  const rawBadge = (script.thumbnailStatBadge || script.thumbnailSubBadge || 'HISTORIA REAL').toUpperCase().trim().slice(0, 22);
+  const badgeText = escXml(rawBadge);
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const rawHook = (script.bridgeShort.hookTitle || '').trim().toUpperCase();
   const rawHead = (script.thumbnailHeadline || '').trim().toUpperCase();
@@ -244,12 +259,12 @@ export async function generateShortThumbnail(
         : '#FACC15';
 
   const maxChars = Math.max(line1.length, line2.length, 6);
-  const fontSize = maxChars <= 7 ? 142 : maxChars <= 11 ? 116 : 92;
+  const fontSize = maxChars <= 7 ? 136 : maxChars <= 11 ? 110 : 86;
   const line1Y = line2 ? 1270 : 1360;
   const line2Y = line1Y + Math.round(fontSize * 1.12);
 
-  const badgeW = Math.min(620, Math.max(320, badgeText.length * 24 + 80));
-  const pillW = Math.min(860, Math.max(460, subPill.length * 22 + 80));
+  const badgeW = Math.min(680, Math.max(320, Math.round(rawBadge.length * 25 + 88)));
+  const pillW = Math.min(920, Math.max(460, Math.round(subPillSource.slice(0, 30).length * 23 + 88)));
 
   const overlaySvg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -268,24 +283,24 @@ export async function generateShortThumbnail(
 
     <!-- Top date/stat badge -->
     <rect x="${Math.round((1080 - badgeW) / 2)}" y="185" width="${badgeW}" height="70" rx="14" fill="#DC2626"/>
-    <text x="540" y="232" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, Impact, Segoe UI, sans-serif" font-size="33" font-weight="900" letter-spacing="3">${badgeText}</text>
+    <text x="540" y="232" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, Liberation Sans, Impact, Segoe UI, sans-serif" font-size="32" font-weight="900" letter-spacing="2.5">${badgeText}</text>
 
     <!-- Massive centered vertical movie-poster headline -->
-    <text x="540" y="${line1Y + 9}" text-anchor="middle" fill="#000000" fill-opacity="0.78" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
-    <text x="540" y="${line1Y}" text-anchor="middle" fill="none" stroke="#020617" stroke-width="22" stroke-linejoin="round" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
-    <text x="540" y="${line1Y}" text-anchor="middle" fill="#FFFFFF" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
+    <text x="540" y="${line1Y + 9}" text-anchor="middle" fill="#000000" fill-opacity="0.78" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
+    <text x="540" y="${line1Y}" text-anchor="middle" fill="none" stroke="#020617" stroke-width="22" stroke-linejoin="round" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
+    <text x="540" y="${line1Y}" text-anchor="middle" fill="#FFFFFF" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line1)}</text>
 
     ${
       line2
-        ? `<text x="540" y="${line2Y + 9}" text-anchor="middle" fill="#000000" fill-opacity="0.78" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>
-           <text x="540" y="${line2Y}" text-anchor="middle" fill="none" stroke="#020617" stroke-width="22" stroke-linejoin="round" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>
-           <text x="540" y="${line2Y}" text-anchor="middle" fill="${accentColor}" font-family="Impact, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>`
+        ? `<text x="540" y="${line2Y + 9}" text-anchor="middle" fill="#000000" fill-opacity="0.78" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>
+           <text x="540" y="${line2Y}" text-anchor="middle" fill="none" stroke="#020617" stroke-width="22" stroke-linejoin="round" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>
+           <text x="540" y="${line2Y}" text-anchor="middle" fill="${accentColor}" font-family="Impact, Liberation Sans, Arial Black, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="2">${escXml(line2)}</text>`
         : ''
     }
 
     <!-- Bottom hook pill -->
     <rect x="${Math.round((1080 - pillW) / 2)}" y="1510" width="${pillW}" height="74" rx="16" fill="#020617" fill-opacity="0.88" stroke="#FACC15" stroke-width="3"/>
-    <text x="540" y="1558" text-anchor="middle" fill="#FACC15" font-family="Arial Black, Segoe UI, sans-serif" font-size="30" font-weight="900" letter-spacing="1.5">${subPill}</text>
+    <text x="540" y="1558" text-anchor="middle" fill="#FACC15" font-family="Arial Black, Liberation Sans, Segoe UI, sans-serif" font-size="29" font-weight="900" letter-spacing="1.5">${subPill}</text>
 
     <rect x="0" y="1904" width="1080" height="16" fill="${accentColor}"/>
   </svg>`;
@@ -296,8 +311,8 @@ export async function generateShortThumbnail(
     : sharp({ create: { width: 1080, height: 1920, channels: 4, background: { r: 8, g: 16, b: 32, alpha: 1 } } });
 
   await base
-    .linear(1.12, -10)
-    .modulate({ saturation: 1.15 })
+    .linear(1.08, -6)
+    .modulate({ saturation: 1.10 })
     .sharpen({ sigma: 1.1 })
     .composite([{ input: Buffer.from(overlaySvg), top: 0, left: 0 }])
     .jpeg({ quality: 93, mozjpeg: true })

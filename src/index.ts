@@ -138,6 +138,10 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
   const curator = new EpisodeMediaCurator();
   await curator.preloadArchivalMedia(topic);
 
+  // Pre-generate 16:9 thumbnail hero AI background first while Cloudflare AI rate limit bucket is 100% fresh
+  const thumbnailPath = path.join(outDir, 'thumbnail_16x9.jpg');
+  await generateDocumentaryThumbnail(script, workDir, thumbnailPath, { curator });
+
   const allScenes = script.chapters.flatMap(c => c.scenes);
   const beatAssets = new Map<number, CuratedBeatAsset>();
 
@@ -147,22 +151,28 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     beatAssets.set(sc.sceneNumber, curated);
   }
 
-  // Curate fast-paced vertical 9:16 assets for Bridge Short
-  console.log('[Pipeline] 📱 Curando planos verticales 1080x1920 para el Short puente...');
-  const shortAssets = await curator.curateBridgeShortAssets({ script, workDir });
-
-  // 6. Generate High-CTR IMAX Movie-Poster 1280x720 YouTube Thumbnail
   const allCuratedArr = Array.from(beatAssets.values());
+
+  // Curate 13-15 fast-paced vertical 9:16 assets (~2.7s/cut) for Bridge Short
+  console.log('[Pipeline] 📱 Curando 13-15 planos verticales rápidos (2.7s/corte) 1080x1920 para el Short...');
+  const shortAssets = await curator.curateBridgeShortAssets({
+    script,
+    workDir,
+    existingBeatAssets: allCuratedArr,
+  });
+
+  // 6. Finalize High-CTR IMAX Movie-Poster 1280x720 YouTube Thumbnail (with curated fallbacks if needed)
   const firstVideoBeat = allCuratedArr.find(a => a.mediaKind === 'video' && a.filePath);
   const firstAiBeat = allCuratedArr.find(
     a => a.mediaKind === 'image' && a.filePath && !a.provider.includes('procedural')
   );
-  const thumbnailPath = path.join(outDir, 'thumbnail_16x9.jpg');
-  await generateDocumentaryThumbnail(script, workDir, thumbnailPath, {
-    curator,
-    fallbackVideoPath: firstVideoBeat?.filePath,
-    fallbackImagePath: firstAiBeat?.filePath,
-  });
+  if (!fs.existsSync(thumbnailPath) || fs.statSync(thumbnailPath).size < 20_000) {
+    await generateDocumentaryThumbnail(script, workDir, thumbnailPath, {
+      curator,
+      fallbackVideoPath: firstVideoBeat?.filePath,
+      fallbackImagePath: firstAiBeat?.filePath,
+    });
+  }
   const shortThumbnailPath = path.join(outDir, 'thumbnail_short_9x16.jpg');
   await generateShortThumbnail(script, workDir, shortThumbnailPath, {
     fallbackImagePath: shortAssets.find(a => a.mediaKind === 'image' && a.filePath)?.filePath,
