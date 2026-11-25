@@ -1,0 +1,26 @@
+name: Docusy 9AM & 3PM Auto-Publish Schedule
+
+on:
+  schedule:
+    # === TANDA MAÑANA (9:07 AM - 11:07 AM America/Mexico_City, UTC-6) ===
+    # El primer disparo publica el episodio matutino; los respaldos se omiten en 2 segundos vía schedule_guard.
+    - cron: '7 15 * * *'
+    - cron: '37 15 * * *'
+    - cron: '7 16 * * *'
+    - cron: '37 16 * * *'
+    - cron: '7 17 * * *'
+    # === TANDA TARDE (3:07 PM - 5:07 PM America/Mexico_City, UTC-6) ===
+    # El primer disparo publica el episodio vespertino; los respaldos se omiten en 2 segundos vía schedule_guard.
+    - cron: '7 21 * * *'
+    - cron: '37 21 * * *'
+    - cron: '7 22 * * *'
+    - cron: '37 22 * * *'
+    - cron: '7 23 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  scheduled-episode:
+    uses: ./.github/workflows/daily-documentary.yml
+    secrets: inherit
