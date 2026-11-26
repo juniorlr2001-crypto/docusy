@@ -166,9 +166,9 @@ jobs:
           cp -r data /tmp/radar_data_updated
           if git ls-remote --exit-code --heads origin radar-state >/dev/null 2>&1; then
             git fetch origin radar-state
-            git checkout -B radar-state origin/radar-state
+            git checkout -f -B radar-state origin/radar-state
           else
-            git checkout -b radar-state
+            git checkout -f -b radar-state
           fi
           mkdir -p data
           cp -r /tmp/radar_data_updated/* data/

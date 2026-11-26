@@ -3,10 +3,22 @@
 // No consume CPU local: toda la generación y subida corre en los servidores de GitHub Actions.
 
 import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
 const REPO = "juniorlr2001-crypto/docusy";
 const WORKFLOW_FILE = "daily-documentary.yml";
 const TIMEZONE = "America/Mexico_City";
+const LOG_FILE = path.resolve(process.cwd(), "output", "dispatch-slot.log");
+
+function logMsg(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  console.log(line);
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, line + "\n", "utf8");
+  } catch {}
+}
 
 function getGitHubToken() {
   if (process.env.GH_PAT || process.env.GITHUB_TOKEN) {
@@ -48,7 +60,7 @@ async function main() {
   const { mxDate, mxHour } = nowParts;
   const isMorning = mxHour < 15;
 
-  console.log(`[dispatch-slot] Hora actual: ${nowParts.formatted} | Tanda: ${isMorning ? "Mañana (9 AM)" : "Tarde (3 PM)"}`);
+  logMsg(`[dispatch-slot] Hora actual: ${nowParts.formatted} | Tanda: ${isMorning ? "Mañana (9 AM)" : "Tarde (3 PM)"}`);
 
   const headers = {
     "Authorization": `Bearer ${token}`,
@@ -67,7 +79,7 @@ async function main() {
     r.status === "in_progress" || r.status === "queued" || r.status === "waiting" || r.status === "pending"
   );
   if (activeRun) {
-    console.log(`⏳ Ya hay una ejecución en curso en GitHub Actions (Run #${activeRun.run_number}, ID ${activeRun.id}). Omitiendo disparo duplicado.`);
+    logMsg(`⏳ Ya hay una ejecución en curso en GitHub Actions (Run #${activeRun.run_number}, ID ${activeRun.id}). Omitiendo disparo duplicado.`);
     return;
   }
 
@@ -95,23 +107,23 @@ async function main() {
     }
   }
 
-  console.log(`[dispatch-slot] Episodios publicados hoy (${mxDate}): total=${todayCount}, mañana=${morningCount}, tarde=${afternoonCount}`);
+  logMsg(`[dispatch-slot] Episodios publicados hoy (${mxDate}): total=${todayCount}, mañana=${morningCount}, tarde=${afternoonCount}`);
 
   if (!force) {
     if (mxHour < 8 || mxHour >= 21) {
-      console.log("⏸️ Fuera de horario diurno (08:00-20:59 MX). Se omite.");
+      logMsg("⏸️ Fuera de horario diurno (08:00-20:59 MX). Se omite.");
       return;
     }
     if (todayCount >= 2) {
-      console.log("✅ Ya se publicaron los 2 episodios de hoy. Nada que hacer.");
+      logMsg("✅ Ya se publicaron los 2 episodios de hoy. Nada que hacer.");
       return;
     }
     if (isMorning && morningCount >= 1) {
-      console.log("✅ Ya se publicó el episodio de la mañana hoy. Nada que hacer.");
+      logMsg("✅ Ya se publicó el episodio de la mañana hoy. Nada que hacer.");
       return;
     }
     if (!isMorning && afternoonCount >= 1) {
-      console.log("✅ Ya se publicó el episodio de la tarde hoy. Nada que hacer.");
+      logMsg("✅ Ya se publicó el episodio de la tarde hoy. Nada que hacer.");
       return;
     }
   }
@@ -142,10 +154,10 @@ async function main() {
     const errText = await dispResp.text();
     throw new Error(`Fallo al disparar workflow_dispatch: HTTP ${dispResp.status} - ${errText}`);
   }
-  console.log("🚀 Disparo workflow_dispatch enviado con éxito a GitHub Actions (HTTP 204).");
+  logMsg("🚀 Disparo workflow_dispatch enviado con éxito a GitHub Actions (HTTP 204).");
 }
 
 main().catch(err => {
-  console.error("❌ Error en dispatch-slot:", err.message);
+  logMsg(`❌ Error en dispatch-slot: ${err.message}`);
   process.exit(1);
 });
