@@ -2,20 +2,13 @@ name: Docusy 9AM & 3PM Cloud Cron Auto-Publish
 
 on:
   schedule:
-    # === TANDA MAÑANA (9:00 AM - 11:00 AM America/Mexico_City, UTC-6) ===
-    # El primer disparo en ejecutarse publica el episodio de la mañana; los respaldos se omiten en 2s.
-    - cron: '0 15 * * *'
-    - cron: '25 15 * * *'
-    - cron: '50 15 * * *'
-    - cron: '20 16 * * *'
-    - cron: '50 16 * * *'
-    # === TANDA TARDE (3:00 PM - 5:00 PM America/Mexico_City, UTC-6) ===
-    # El primer disparo en ejecutarse publica el episodio de la tarde; los respaldos se omiten en 2s.
-    - cron: '0 21 * * *'
-    - cron: '25 21 * * *'
-    - cron: '52 21 * * *'
-    - cron: '20 22 * * *'
-    - cron: '50 22 * * *'
+    # Disparo continuo cada 30 minutos las 24h en los servidores de GitHub Actions.
+    # Elimina por completo el desfase de 5-6 horas de la cola de crons de GitHub:
+    # schedule_guard revisa la hora real en America/Mexico_City y publica exactamente:
+    # - 1 episodio en la tanda de las 9:00 AM (09:00-14:59 MX)
+    # - 1 episodio en la tanda de las 3:00 PM (15:00-21:59 MX)
+    # omitiendo todos los demás pulsos en ~1 segundo.
+    - cron: '12,42 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -67,7 +60,7 @@ jobs:
             console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute} | evento=${eventName}`);
 
             if (eventName === "schedule") {
-              if (mxHour < 8 || mxHour >= 21) {
+              if (mxHour < 9 || mxHour >= 22) {
                 console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
                 fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                 process.exit(0);

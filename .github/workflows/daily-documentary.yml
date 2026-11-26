@@ -2,12 +2,9 @@ name: Daily Documentary Generator & YouTube Auto-Upload
 
 on:
   schedule:
-    # Tanda Mañana (9:17 AM y 9:47 AM America/Mexico_City, UTC-6)
-    - cron: '17 15 * * *'
-    - cron: '47 15 * * *'
-    # Tanda Tarde (3:17 PM y 3:47 PM America/Mexico_City, UTC-6)
-    - cron: '17 21 * * *'
-    - cron: '47 21 * * *'
+    # Pulso continuo cada 30 minutos las 24h en los servidores de GitHub Actions
+    # (compensando cualquier desfase de cola de GitHub; schedule_guard filtra 9:00 AM y 3:00 PM Ciudad de México)
+    - cron: '27,57 * * * *'
   workflow_call:
   workflow_dispatch:
     inputs:
@@ -78,7 +75,7 @@ jobs:
             console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute} | evento=${eventName} | origen=${triggerSource}`);
 
             if (eventName === "schedule" || eventName === "workflow_call" || triggerSource === "cloudflare_cron") {
-              if (mxHour < 8 || mxHour >= 21) {
+              if (mxHour < 9 || mxHour >= 22) {
                 console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
                 fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                 process.exit(0);
