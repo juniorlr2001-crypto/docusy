@@ -60,43 +60,30 @@ jobs:
             console.log(`Hora actual en Ciudad de México: ${mxDate} ${parts.hour}:${parts.minute} | evento=${eventName}`);
 
             if (eventName === "schedule") {
-              if (mxHour < 9 || mxHour >= 22) {
-                console.log(`⏸️ Disparo fuera de horario diurno (${mxHour}:00 MX). Se omite para no publicar de noche.`);
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
-                process.exit(0);
-              }
-              const isMorning = mxHour < 15;
               try {
                 const hist = JSON.parse(fs.readFileSync("data/published_topics.json", "utf8"));
                 const log = Array.isArray(hist.historyLog) ? hist.historyLog : [];
                 let todayCount = 0;
-                let morningCount = 0;
-                let afternoonCount = 0;
+                let lastUsedMs = 0;
                 for (const entry of log) {
                   if (!entry.usedAt || entry.usedAt === "backfilled") continue;
                   const d = new Date(entry.usedAt);
                   if (isNaN(d.getTime())) continue;
+                  if (d.getTime() > lastUsedMs) lastUsedMs = d.getTime();
                   const ep = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, p.value]));
                   const eDate = `${ep.year}-${ep.month}-${ep.day}`;
-                  const eHour = parseInt(ep.hour, 10);
                   if (eDate === mxDate) {
                     todayCount++;
-                    if (eHour < 15) morningCount++;
-                    else afternoonCount++;
                   }
                 }
                 if (todayCount >= 2) {
-                  console.log(`✅ Ya se publicaron los 2 episodios del día (${mxDate}). Omitiendo disparo de respaldo.`);
+                  console.log(`✅ Ya se publicaron los 2 episodios del día (${mxDate}). Omitiendo disparo adicional.`);
                   fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                   process.exit(0);
                 }
-                if (isMorning && morningCount >= 1) {
-                  console.log(`✅ Ya se publicó el episodio de la mañana (${mxDate}). Omitiendo disparo de respaldo matutino.`);
-                  fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
-                  process.exit(0);
-                }
-                if (!isMorning && afternoonCount >= 1) {
-                  console.log(`✅ Ya se publicó el episodio de la tarde (${mxDate}). Omitiendo disparo de respaldo vespertino.`);
+                const hoursSinceLast = lastUsedMs > 0 ? (Date.now() - lastUsedMs) / 3600000 : 999;
+                if (todayCount >= 1 && hoursSinceLast < 3.5) {
+                  console.log(`⏳ Último episodio publicado hace ${hoursSinceLast.toFixed(1)}h (<3.5h). Omitiendo para respetar separación entre tandas.`);
                   fs.appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
                   process.exit(0);
                 }
