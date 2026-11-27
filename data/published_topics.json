@@ -12,7 +12,8 @@
     "puente-tacoma-narrows",
     "senal-wow-1977",
     "voyager-1-disco-oro",
-    "rescate-cueva-tham-luang"
+    "rescate-cueva-tham-luang",
+    "vasa-barco-suecia-1628"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -25,10 +26,11 @@
     "mecanismo_de_anticitera",
     "fosa_de_las_marianas",
     "expedicion_imperial_transantartica",
-    "puente_de_tacoma_(1940)",
+    "puente_de_tacoma_1940",
     "senal_wow",
     "voyager_1",
-    "rescate_de_la_cueva_de_tham_luang"
+    "rescate_de_la_cueva_de_tham_luang",
+    "vasa"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -43,9 +45,11 @@
     "el_dia_que_un_puente_de_acero_se_retorcio_como_papel_el_colapso_de_tacoma_narrows",
     "los_72_segundos_que_desconcertaron_a_la_astronomia_el_enigma_de_la_senal_wow",
     "la_maquina_humana_a_24_000_millones_de_kilometros_que_todavia_nos_habla_desde_el_espacio_interestelar",
-    "atrapados_4_kilometros_bajo_tierra_y_bajo_el_agua_la_operacion_imposible_de_tham_luang"
+    "atrapados_4_kilometros_bajo_tierra_y_bajo_el_agua_la_operacion_imposible_de_tham_luang",
+    "el_dia_que_un_puente_de_acero_se_retorcio_como_goma_y_se_desplomo_por_el_viento",
+    "el_barco_de_guerra_mas_caro_de_su_epoca_que_se_hundio_a_los_20_minutos_de_zarpar"
   ],
-  "lastCategory": "supervivencia",
+  "lastCategory": "errores_historicos",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -137,6 +141,13 @@
       "wikiTitleEs": "Rescate_de_la_cueva_de_Tham_Luang",
       "titleSeed": "Atrapados 4 kilómetros bajo tierra y bajo el agua: la operación imposible de Tham Luang",
       "usedAt": "2026-11-26T22:25:28.000Z"
+    },
+    {
+      "id": "vasa-barco-suecia-1628",
+      "category": "errores_historicos",
+      "wikiTitleEs": "Vasa",
+      "titleSeed": "El barco de guerra más caro de su época que se hundió a los 20 minutos de zarpar",
+      "usedAt": "2026-11-27T17:41:47.954Z"
     }
   ]
 }
