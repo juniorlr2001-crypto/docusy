@@ -13,7 +13,8 @@
     "senal-wow-1977",
     "voyager-1-disco-oro",
     "rescate-cueva-tham-luang",
-    "vasa-barco-suecia-1628"
+    "vasa-barco-suecia-1628",
+    "paso-diatlov-1959"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -30,7 +31,9 @@
     "senal_wow",
     "voyager_1",
     "rescate_de_la_cueva_de_tham_luang",
-    "vasa"
+    "vasa",
+    "vasa_barco",
+    "incidente_del_paso_diatlov"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -47,9 +50,10 @@
     "la_maquina_humana_a_24_000_millones_de_kilometros_que_todavia_nos_habla_desde_el_espacio_interestelar",
     "atrapados_4_kilometros_bajo_tierra_y_bajo_el_agua_la_operacion_imposible_de_tham_luang",
     "el_dia_que_un_puente_de_acero_se_retorcio_como_goma_y_se_desplomo_por_el_viento",
-    "el_barco_de_guerra_mas_caro_de_su_epoca_que_se_hundio_a_los_20_minutos_de_zarpar"
+    "el_barco_de_guerra_mas_caro_de_su_epoca_que_se_hundio_a_los_20_minutos_de_zarpar",
+    "que_ocurrio_realmente_en_el_paso_diatlov_el_enigma_helado_de_1959_que_la_ciencia_tardo_62_anos_en_explicar"
   ],
-  "lastCategory": "errores_historicos",
+  "lastCategory": "misterios",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -148,6 +152,13 @@
       "wikiTitleEs": "Vasa",
       "titleSeed": "El barco de guerra más caro de su época que se hundió a los 20 minutos de zarpar",
       "usedAt": "2026-11-27T17:41:47.954Z"
+    },
+    {
+      "id": "paso-diatlov-1959",
+      "category": "misterios",
+      "wikiTitleEs": "Incidente_del_paso_Diátlov",
+      "titleSeed": "Qué ocurrió realmente en el Paso Diátlov: el enigma helado de 1959 que la ciencia tardó 62 años en explicar",
+      "usedAt": "2026-11-27T21:36:43.660Z"
     }
   ]
 }
