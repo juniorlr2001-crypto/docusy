@@ -37,8 +37,8 @@ export const CONFIG = {
   FAL_VIDEO_MODEL: envFirst('DOCU_FAL_VIDEO_MODEL') || 'fal-ai/kling-video/v1.6/standard/image-to-video',
   MAX_AI_VIDEO_CLIPS_PER_EPISODE: Math.max(0, parseInt(process.env.DOCU_MAX_AI_VIDEOS || '6', 10) || 6),
 
-  // Budget cap for Cloudflare FLUX.1 Schnell (~110 neurons/image -> 28 images ≈ 3,080 neurons/video -> 3 full films/day free)
-  MAX_AI_IMAGES_PER_EPISODE: Math.max(0, parseInt(process.env.DOCU_MAX_AI_IMAGES || '28', 10) || 28),
+  // Safe Cloudflare FLUX.1 Schnell cap (11 scene images + 1 thumbnail = 12 images/ep -> fits 3 full runs/day inside 10,000 free neurons)
+  MAX_AI_IMAGES_PER_EPISODE: Math.max(0, parseInt(process.env.DOCU_MAX_AI_IMAGES || '11', 10) || 11),
 
   // Cinema Scope 2.35:1 IMAX letterbox matte (true by default for The Dark Knight movie feel)
   CINEMA_LETTERBOX: (process.env.DOCU_CINEMA_LETTERBOX || 'true').trim().toLowerCase() !== 'false',

@@ -4,6 +4,8 @@ export type TopicCategory =
   | 'misterios'
   | 'ciencia_extrema';
 
+export type DocuMood = 'tension' | 'mystery' | 'awe' | 'survival';
+
 export type CameraMotion = 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right';
 
 export type CinemaColorLook =
@@ -13,6 +15,50 @@ export type CinemaColorLook =
   | 'coldwar_tungsten'
   | 'cosmos_gold'
   | 'vintage_sepia';
+
+export type NarrativeArchetype =
+  | 'countdown_forensic'
+  | 'mystery_investigation'
+  | 'survival_immersion'
+  | 'domino_effect'
+  | 'scale_paradox';
+
+export type ThumbnailArchetype =
+  | 'editorial_left'
+  | 'editorial_right'
+  | 'cinema_bottom'
+  | 'forensic_dossier';
+
+export type AccentPalette =
+  | 'electric_gold'
+  | 'crimson_alert'
+  | 'biolum_cyan'
+  | 'solar_amber'
+  | 'ice_laser';
+
+export type MusicVariant =
+  | 'zimmer_pulse'
+  | 'abyssal_cello'
+  | 'clockwork_thriller'
+  | 'interstellar_organ';
+
+export type ShortCaptionTheme = 'gold_impact' | 'cyan_pulse' | 'crimson_alert';
+
+export interface CreativeDnaPlan {
+  recommendedCategory: TopicCategory;
+  narrativeArchetype: NarrativeArchetype;
+  narrativeInstructionEs: string;
+  thumbnailArchetype: ThumbnailArchetype;
+  accentPalette: AccentPalette;
+  narratorVoice: 'Fenrir' | 'Charon' | 'Orus';
+  musicVariant: MusicVariant;
+  shortCaptionTheme: ShortCaptionTheme;
+  targetShortMinWords: number;
+  targetShortMaxWords: number;
+  forbiddenStatBadges: string[];
+  forbiddenOpeningPhrases: string[];
+  learningBriefEs: string;
+}
 
 export type BeatVisualType =
   | 'video_broll'
@@ -49,7 +95,7 @@ export interface DocumentaryTopic {
   angle: string;
   wikiTitleEs: string;
   wikiTitleEn?: string;
-  mood: 'tension' | 'mystery' | 'awe' | 'survival';
+  mood: DocuMood;
   visualTheme: string;
   verifiedFacts?: string;
 }
@@ -66,7 +112,7 @@ export interface DocumentaryScene {
   keyQuoteEs?: string;
   statOverlay?: StatOverlay;
   mapSpec?: MapSpec;
-  weight: number; // Relative share of chapter duration
+  weight: number;
 }
 
 export interface DocumentaryChapter {
@@ -88,6 +134,7 @@ export interface BridgeShortPlan {
   mapSpec?: MapSpec;
   youtubeTitle: string;
   youtubeDescription: string;
+  pinnedComment?: string;
   hashtags: string[];
 }
 
@@ -95,8 +142,16 @@ export interface DocumentaryScript {
   topicId: string;
   slug: string;
   category: TopicCategory;
-  mood: 'tension' | 'mystery' | 'awe' | 'survival';
+  mood: DocuMood;
   colorLook?: CinemaColorLook;
+  creativeDna?: {
+    narrativeArchetype: NarrativeArchetype;
+    thumbnailArchetype: ThumbnailArchetype;
+    accentPalette: AccentPalette;
+    narratorVoice: string;
+    musicVariant: MusicVariant;
+    shortCaptionTheme: ShortCaptionTheme;
+  };
   visualStyleGuideEn: string;
   youtubeTitle: string;
   thumbnailHeadline: string;

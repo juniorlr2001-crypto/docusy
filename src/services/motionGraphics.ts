@@ -692,80 +692,67 @@ export async function buildKeyQuoteOverlayPng(params: {
 }
 
 /**
- * High-retention 1080x1920 vertical Short kinetic caption overlay:
- * - Floating bold outlined captions (3-5 punchy words, NO opaque box hiding the video!)
- * - Clean top safe-zone hook badge
- * - Smooth glowing progress bar along the safe bottom margin
- * - Final CTA banner pointing to the full documentary
+ * Loop-Optimized 1080x1920 Vertical Short Kinetic Caption Overlay (v2.5):
+ * - ZERO bottom outro banner (`DOCUMENTAL COMPLETO...`) and ZERO bottom duplicate progress bar/handle
+ *   that previously invaded YouTube Shorts' native UI and caused early swipes before the loop!
+ * - Rotates across 3 distinct kinetic typography themes (`gold_impact`, `cyan_pulse`, `crimson_alert`)
+ *   positioned cleanly in the unobstructed center-lower eye zone (`y=1060..1240`).
  */
 export async function buildShortKineticOverlayPng(params: {
   outPath: string;
   hookTitle: string;
   captionChunk: string;
   channelName: string;
-  progress: number; // 0..1
+  progress: number;
   showCta: boolean;
   mood: DocuMood;
+  captionTheme?: 'gold_impact' | 'cyan_pulse' | 'crimson_alert';
 }): Promise<string> {
   const width = 1080;
   const height = 1920;
-  const accent = MOOD_ACCENTS[params.mood] || MOOD_ACCENTS.survival;
+  const theme = params.captionTheme || 'gold_impact';
+  const themeColors = {
+    gold_impact: { highlight: '#FFE600', pillBorder: '#FFE600', pillBg: '#020617' },
+    cyan_pulse: { highlight: '#00F5D4', pillBorder: '#38BDF8', pillBg: '#041326' },
+    crimson_alert: { highlight: '#FF4D4D', pillBorder: '#FF3B30', pillBg: '#1A050A' },
+  }[theme];
 
-  const safeHook = escXml(params.hookTitle.toUpperCase().slice(0, 34));
-  const captionLines = wrapLines(params.captionChunk.toUpperCase(), 16, 3);
-  const safeChan = escXml(params.channelName.toUpperCase());
+  const safeHook = escXml(params.hookTitle.toUpperCase().slice(0, 32));
+  const captionLines = wrapLines(params.captionChunk.toUpperCase(), 15, 3);
 
-  const startY = 1230 - (captionLines.length - 1) * 44;
+  const startY = 1120 - (captionLines.length - 1) * 44;
   const captionSvg = captionLines
     .map((line, i) =>
       outlinedSvgText({
         x: width / 2,
-        y: startY + i * 86,
+        y: startY + i * 88,
         text: line,
-        fontSize: 70,
-        fill: i === captionLines.length - 1 ? '#FACC15' : '#FFFFFF',
+        fontSize: 74,
+        fill: i === captionLines.length - 1 ? themeColors.highlight : '#FFFFFF',
         strokeColor: '#020617',
-        strokeWidth: 14,
-        letterSpacing: 1,
+        strokeWidth: 15,
+        letterSpacing: 1.2,
       })
     )
     .join('');
 
-  const ctaSvg = params.showCta
-    ? `<rect x="96" y="1475" width="888" height="96" rx="20" fill="${accent.primary}"/>
-       <text x="540" y="1536" text-anchor="middle" fill="#020617" font-family="Arial Black, Segoe UI, sans-serif" font-size="34" font-weight="900">DOCUMENTAL COMPLETO EN EL CANAL</text>`
+  // Show top hook badge only during the first 35% of the Short so the frame feels dynamic & organic!
+  const showTopHook = params.progress <= 0.38;
+  const topHookSvg = showTopHook
+    ? `<rect x="96" y="154" width="888" height="72" rx="36" fill="${themeColors.pillBg}" fill-opacity="0.82" stroke="${themeColors.pillBorder}" stroke-width="3"/>
+       <text x="540" y="201" text-anchor="middle" fill="${themeColors.highlight}" font-family="Arial Black, Liberation Sans, Segoe UI, sans-serif" font-size="30" font-weight="900" letter-spacing="1.5">${safeHook}</text>`
     : '';
-
-  const barW = 860;
-  const barFillW = Math.max(18, Math.round(barW * Math.max(0, Math.min(1, params.progress))));
 
   const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="sTop" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#020617" stop-opacity="0.78"/>
-        <stop offset="22%" stop-color="#020617" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="sBot" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" stop-color="#020617" stop-opacity="0.86"/>
-        <stop offset="44%" stop-color="#020617" stop-opacity="0"/>
+      <linearGradient id="sMid" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stop-color="#020617" stop-opacity="0.55"/>
+        <stop offset="48%" stop-color="#020617" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    <rect width="${width}" height="${height}" fill="url(#sTop)"/>
-    <rect width="${width}" height="${height}" fill="url(#sBot)"/>
-
-    <!-- Clean top safe-zone hook pill -->
-    <rect x="88" y="158" width="904" height="76" rx="38" fill="#020617" fill-opacity="0.80" stroke="${accent.primary}" stroke-width="3"/>
-    <text x="540" y="208" text-anchor="middle" fill="${accent.primary}" font-family="Arial Black, Segoe UI, sans-serif" font-size="31" font-weight="900" letter-spacing="1.5">${safeHook}</text>
-
-    <!-- Floating viral outlined kinetic captions (zero opaque box blocking footage) -->
+    <rect width="${width}" height="${height}" fill="url(#sMid)"/>
+    ${topHookSvg}
     ${captionSvg}
-
-    ${ctaSvg}
-
-    <!-- Progress bar + channel signature -->
-    <rect x="110" y="1628" width="${barW}" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
-    <rect x="110" y="1628" width="${barFillW}" height="8" rx="4" fill="${accent.primary}"/>
-    <text x="540" y="1676" text-anchor="middle" fill="#CBD5E1" fill-opacity="0.82" font-family="Consolas, Segoe UI, sans-serif" font-size="24" font-weight="700" letter-spacing="4">${safeChan}</text>
   </svg>`;
 
   fs.mkdirSync(path.dirname(params.outPath), { recursive: true });

@@ -12,11 +12,20 @@ import {
 import { generateDocumentaryScript } from './services/scriptEngine.js';
 import { generateNarrationAudio } from './services/narratorTts.js';
 import { EpisodeMediaCurator } from './services/mediaCurator.js';
-import { generateDocumentaryThumbnail, generateShortThumbnail } from './services/thumbnailGenerator.js';
+import {
+  generateDocumentaryThumbnail,
+  generateShortThumbnail,
+  isGenuinePhotographicImage,
+} from './services/thumbnailGenerator.js';
 import { ensureCinemaSfxPack, ensureDocumentaryMusicBed } from './services/ambientMusic.js';
 import { assembleBridgeShortVideo, assembleDocumentaryVideo } from './services/docuAssembler.js';
 import { auditDocumentaryCompliance } from './services/complianceGuard.js';
 import { uploadEpisodeBundleToYouTube } from './services/youtubeUploader.js';
+import {
+  buildSelfLearningCreativePlan,
+  recordCompletedEpisodeInMemory,
+  syncLiveChannelTelemetry,
+} from './services/selfLearningOptimizer.js';
 
 function parseArg(flag: string): string | undefined {
   const prefix = `--${flag}=`;
@@ -74,16 +83,28 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
 
   console.log('\n====================================================================');
   console.log(
-    `🎬 DOCU-VIRAL ENGINE v2 — CINEMA PRODUCTION EDITION (${quickMode ? 'PRUEBA RÁPIDA' : 'DOCUMENTAL 1080p + SHORT'})`
+    `🎬 DOCU-VIRAL ENGINE v2.5 — AUTO-APRENDIZAJE & EDICIÓN ANTI-FÁBRICA (${quickMode ? 'PRUEBA RÁPIDA' : 'DOCUMENTAL 1080p + SHORT LOOP'})`
   );
   console.log('====================================================================\n');
 
+  // 0. Sync live YouTube channel metrics ($0) & build adaptive anti-factory Creative DNA
+  const perfMemory = await syncLiveChannelTelemetry();
+  const historySnapshot = loadHistory();
+  const creativePlan = buildSelfLearningCreativePlan(perfMemory, historySnapshot.lastCategory);
+
   // 1. Select verified documentary topic & load Wikipedia facts
   const forceDiscover = process.argv.includes('--discover');
-  const topic = await selectNextDocumentaryTopic({ category, topicId, customTopic, forceDiscover });
+  const topic = await selectNextDocumentaryTopic({
+    category,
+    recommendedCategory: creativePlan.recommendedCategory,
+    learningBriefEs: creativePlan.learningBriefEs,
+    topicId,
+    customTopic,
+    forceDiscover,
+  });
   console.log(`[Pipeline] 📌 Tema seleccionado: "${topic.titleSeed}" (${topic.category})`);
 
-  // 2. Write complete IMAX documentary script + 60-beat visual storyboard + Bridge Short plan
+  // 2. Write complete IMAX documentary script + 72-beat visual storyboard + Circular-Loop Bridge Short
   const episodeSlug = `${topic.id}-${new Date().toISOString().slice(0, 10)}${quickMode ? '-quick' : ''}`;
   const outDir = path.join(CONFIG.OUTPUT_DIR, episodeSlug);
   const workDir = path.join(outDir, 'work');
@@ -95,20 +116,23 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     console.log(`[Pipeline] ♻️ Reutilizando guion guardado: ${scriptPath}`);
     script = JSON.parse(fs.readFileSync(scriptPath, 'utf-8'));
   } else {
-    script = await generateDocumentaryScript(topic, { quickMode });
+    script = await generateDocumentaryScript(topic, { quickMode, creativePlan });
     script.slug = episodeSlug;
     fs.writeFileSync(scriptPath, JSON.stringify(script, null, 2), 'utf-8');
   }
 
-  // 3. Prepare Hans-Zimmer-inspired tension score + cinema SFX pack (BRAAAM, Whoosh, Riser)
+  // 3. Prepare rotated copyright-free cinematic score + cinema SFX pack
+  const chosenMusicVariant = script.creativeDna?.musicVariant || creativePlan.musicVariant;
   const [musicPath, sfx] = await Promise.all([
-    ensureDocumentaryMusicBed(script.mood),
+    ensureDocumentaryMusicBed(script.mood, chosenMusicVariant),
     ensureCinemaSfxPack(),
   ]);
 
-  // 4. Generate chapter voiceovers sequentially (Gemini 2.5 Native Audio Fenrir/Charon)
+  // 4. Generate chapter voiceovers sequentially (rotating studio narrator voices)
   const chapterAudios: Array<{ chapterNumber: number; audioPath: string; durationSec: number }> = [];
-  const narratorVoice = script.mood === 'mystery' ? 'Charon' : 'Fenrir';
+  const narratorVoice =
+    (script.creativeDna?.narratorVoice as 'Fenrir' | 'Charon' | 'Orus' | undefined) ||
+    creativePlan.narratorVoice;
 
   for (const ch of script.chapters) {
     const audioOut = await generateNarrationAudio({
@@ -134,18 +158,21 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     voiceName: narratorVoice,
   });
 
-  // 5. Curate all cinema visual beats (Real 1080p HD Video + Hero IMAX AI + Animated Maps + Dossiers + Wikimedia Archival)
-  const curator = new EpisodeMediaCurator();
+  // 5. Curate all cinema visual beats with cross-episode stock footage deduplication
+  const curator = new EpisodeMediaCurator(perfMemory.recentStockVideoIds);
   await curator.preloadArchivalMedia(topic);
 
-  // Pre-generate 16:9 thumbnail hero AI background first while Cloudflare AI rate limit bucket is 100% fresh
+  // Pre-attempt 16:9 thumbnail hero AI background first while Cloudflare AI bucket is fresh (do NOT save flat emergency gradient yet!)
   const thumbnailPath = path.join(outDir, 'thumbnail_16x9.jpg');
-  await generateDocumentaryThumbnail(script, workDir, thumbnailPath, { curator });
+  await generateDocumentaryThumbnail(script, workDir, thumbnailPath, {
+    curator,
+    allowEmergencyGradient: false,
+  });
 
   const allScenes = script.chapters.flatMap(c => c.scenes);
   const beatAssets = new Map<number, CuratedBeatAsset>();
 
-  console.log(`[Pipeline] 🎥 Curando ${allScenes.length} planos visuales 1080p (videos HD + IA IMAX + mapas + fichas)...`);
+  console.log(`[Pipeline] 🎥 Curando ${allScenes.length} planos visuales 1080p (videos HD sin repetir + IA + mapas + fichas)...`);
   for (const sc of allScenes) {
     const curated = await curator.curateDocumentaryBeat({ scene: sc, script, workDir });
     beatAssets.set(sc.sceneNumber, curated);
@@ -153,26 +180,30 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
 
   const allCuratedArr = Array.from(beatAssets.values());
 
-  // Curate 13-15 fast-paced vertical 9:16 assets (~2.7s/cut) for Bridge Short
-  console.log('[Pipeline] 📱 Curando 13-15 planos verticales rápidos (2.7s/corte) 1080x1920 para el Short...');
+  // Curate 14-16 rapid vertical 9:16 assets (~1.8s/cut) for Bridge Short
+  console.log('[Pipeline] 📱 Curando 15 planos verticales rápidos (~1.8s/corte) 1080x1920 para el Short...');
   const shortAssets = await curator.curateBridgeShortAssets({
     script,
     workDir,
     existingBeatAssets: allCuratedArr,
   });
 
-  // 6. Finalize High-CTR IMAX Movie-Poster 1280x720 YouTube Thumbnail (with curated fallbacks if needed)
-  const firstVideoBeat = allCuratedArr.find(a => a.mediaKind === 'video' && a.filePath);
-  const firstAiBeat = allCuratedArr.find(
-    a => a.mediaKind === 'image' && a.filePath && !a.provider.includes('procedural')
-  );
-  if (!fs.existsSync(thumbnailPath) || fs.statSync(thumbnailPath).size < 20_000) {
+  // 6. Guarantee a genuine high-contrast photographic 16:9 Thumbnail (uses curated AI/archival/HD video frame if Step 5 hit quota!)
+  const rawThumbBg = path.join(workDir, 'thumb_bg_raw.jpg');
+  if (!fs.existsSync(thumbnailPath) || !(await isGenuinePhotographicImage(rawThumbBg))) {
+    const firstVideoBeat = allCuratedArr.find(a => a.mediaKind === 'video' && a.filePath);
+    const firstAiBeat = allCuratedArr.find(
+      a => a.mediaKind === 'image' && a.filePath && !a.provider.includes('procedural')
+    );
     await generateDocumentaryThumbnail(script, workDir, thumbnailPath, {
       curator,
-      fallbackVideoPath: firstVideoBeat?.filePath,
       fallbackImagePath: firstAiBeat?.filePath,
+      fallbackVideoPath: firstVideoBeat?.filePath,
+      forceRegenerateBg: true,
+      allowEmergencyGradient: true,
     });
   }
+
   const shortThumbnailPath = path.join(outDir, 'thumbnail_short_9x16.jpg');
   await generateShortThumbnail(script, workDir, shortThumbnailPath, {
     fallbackImagePath: shortAssets.find(a => a.mediaKind === 'image' && a.filePath)?.filePath,
@@ -192,7 +223,7 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     outputSrtPath: captionsPath,
   });
 
-  // 8. Assemble Full HD 1080x1920 @ 30fps Bridge Short
+  // 8. Assemble Full HD 1080x1920 @ 30fps Circular-Loop Short
   const shortPath = path.join(outDir, 'short_9x16.mp4');
   const assembledShort = await assembleBridgeShortVideo({
     script,
@@ -207,7 +238,7 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     outputShortPath: shortPath,
   });
 
-  // 9. Build SEO description + Honest Visual & Compliance Audit
+  // 9. Build viewer-first SEO description (AI disclosure cleanly placed at the bottom)
   const mediaTelemetry = computeMediaTelemetry(allCuratedArr, assembled.durationSec);
   const chaptersBlock = assembled.chapterTimestamps
     .map(c => `${c.timestamp} ${c.title}`)
@@ -216,13 +247,13 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
   const fullYoutubeDescription = [
     script.youtubeDescriptionIntro,
     '',
+    `💬 ${script.pinnedComment}`,
+    '',
     '📌 CAPÍTULOS:',
     chaptersBlock,
     '',
-    `💬 ${script.pinnedComment}`,
-    '',
-    '🤖 Producción documental independiente · Narración asistida con voz IA, reconstrucciones visuales cinematográficas y gráficos documentales originales.',
-    '📚 Fuentes: registros históricos, archivos públicos y documentación verificada.',
+    '📚 Fuentes: registros históricos, archivos públicos y documentación científica verificada.',
+    '🤖 Transparencia: producción documental independiente con narración asistida por voz IA y reconstrucciones cinematográficas.',
     '',
     '#Documental #HistoriaReal #Misterios #Supervivencia #Ciencia',
   ].join('\n');
@@ -239,8 +270,9 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
   const metadataPath = path.join(outDir, 'metadata.json');
   const metadataPackage = {
     generatedAt: new Date().toISOString(),
-    engineVersion: '2.0-cinema-production',
+    engineVersion: '2.5-self-learning-antifactory',
     colorLook: script.colorLook,
+    creativeDna: script.creativeDna,
     topicId: topic.id,
     category: topic.category,
     durationSec: Number(assembled.durationSec.toFixed(1)),
@@ -256,6 +288,7 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     bridgeShort: {
       title: script.bridgeShort.youtubeTitle,
       description: `${script.bridgeShort.youtubeDescription}\n\n${script.bridgeShort.hashtags.join(' ')}`,
+      pinnedComment: script.bridgeShort.pinnedComment || script.pinnedComment,
       hashtags: script.bridgeShort.hashtags,
     },
     compliance,
@@ -273,18 +306,52 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
     markTopicUsed(topic);
   }
 
+  let uploadedDocuId: string | undefined;
+  let uploadedShortId: string | undefined;
+
   const autoUpload =
     process.argv.includes('--auto-upload') ||
     (process.env.DOCU_AUTO_UPLOAD || '').trim().toLowerCase() === 'true';
 
   if (autoUpload) {
     if (CONFIG.YOUTUBE_CLIENT_ID && CONFIG.YOUTUBE_CLIENT_SECRET && CONFIG.YOUTUBE_REFRESH_TOKEN) {
-      await uploadEpisodeBundleToYouTube(metadataPath);
+      const up = await uploadEpisodeBundleToYouTube(metadataPath);
+      uploadedDocuId = up.documentary.videoId;
+      uploadedShortId = up.bridgeShort.videoId;
     } else {
       console.warn(
-        '[YouTubeUploader] ⚠️ --auto-upload activo pero faltan DOCU_YOUTUBE_CLIENT_ID / SECRET / REFRESH_TOKEN. Ejecuta `npm run auth:youtube` para conectar el canal.'
+        '[YouTubeUploader] ⚠️ --auto-upload activo pero faltan DOCU_YOUTUBE_CLIENT_ID / SECRET / REFRESH_TOKEN.'
       );
     }
+  }
+
+  // Persist Creative DNA + used stock video IDs into self-learning memory (`data/performance_memory.json` -> `radar-state`)
+  if (!quickMode) {
+    const shortWords = script.bridgeShort.narrationEs.split(/\s+/).filter(Boolean).length;
+    recordCompletedEpisodeInMemory({
+      memory: perfMemory,
+      entry: {
+        slug: episodeSlug,
+        topicId: topic.id,
+        category: topic.category,
+        narrativeArchetype: script.creativeDna?.narrativeArchetype || creativePlan.narrativeArchetype,
+        thumbnailArchetype: script.creativeDna?.thumbnailArchetype || creativePlan.thumbnailArchetype,
+        accentPalette: script.creativeDna?.accentPalette || creativePlan.accentPalette,
+        narratorVoice,
+        musicVariant: chosenMusicVariant,
+        shortCaptionTheme: script.creativeDna?.shortCaptionTheme || creativePlan.shortCaptionTheme,
+        youtubeTitle: script.youtubeTitle,
+        shortTitle: script.bridgeShort.youtubeTitle,
+        thumbnailHeadline: script.thumbnailHeadline,
+        thumbnailStatBadge: script.thumbnailStatBadge,
+        shortWordCount: shortWords,
+        shortDurationSec: Number(assembledShort.durationSec.toFixed(1)),
+        documentaryVideoId: uploadedDocuId,
+        shortVideoId: uploadedShortId,
+        createdAt: new Date().toISOString(),
+      },
+      usedStockVideoIds: curator.getUsedStockVideoIds(),
+    });
   }
 
   if (
@@ -299,21 +366,16 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
   }
 
   console.log('\n====================================================================');
-  console.log('✅ EPISODIO DOCUMENTAL v2 (1080p IMAX) GENERADO CON ÉXITO');
+  console.log('✅ DOCUMENTAL v2.5 (AUTO-APRENDIZAJE + ANTI-FÁBRICA) GENERADO');
   console.log(`📁 Carpeta:      ${outDir}`);
-  console.log(`🎬 Documental:   ${documentaryPath} (${(assembled.durationSec / 60).toFixed(2)} min · 1920x1080)`);
-  console.log(`📱 Short 9:16:   ${shortPath} (${assembledShort.durationSec.toFixed(1)} s · 1080x1920)`);
-  console.log(`🖼️ Póster 16:9:  ${thumbnailPath}`);
-  console.log(`📝 Subtítulos:   ${captionsPath}`);
+  console.log(`🎬 Documental:   ${documentaryPath} (${(assembled.durationSec / 60).toFixed(2)} min)`);
+  console.log(`📱 Short Loop:   ${shortPath} (${assembledShort.durationSec.toFixed(1)} s)`);
+  console.log(`🖼️ Miniatura:    ${thumbnailPath}`);
   console.log(
-    `📊 Visuales:     ${mediaTelemetry.totalBeats} planos (${mediaTelemetry.avgSecPerBeat}s/corte) -> ` +
-      `${mediaTelemetry.videoBrollCount} videos HD | ${mediaTelemetry.aiCinemaCount} IA IMAX | ` +
-      `${mediaTelemetry.animatedMapCount} mapas | ${mediaTelemetry.statDossierCount} fichas | ${mediaTelemetry.archivalCount} archivo`
+    `📊 Telemetría:   ${mediaTelemetry.totalBeats} planos (${mediaTelemetry.avgSecPerBeat}s/corte) -> ` +
+      `${mediaTelemetry.videoBrollCount} videos HD | ${mediaTelemetry.aiCinemaCount} IA | ` +
+      `${mediaTelemetry.animatedMapCount} mapas | ${mediaTelemetry.statDossierCount} fichas`
   );
-  console.log(`🛡️ Auditoría:    ${compliance.score}/100 (${compliance.compliant ? 'APROBADO' : 'REVISAR'})`);
-  if (compliance.warnings.length > 0) {
-    console.log(`⚠️ Avisos:       ${compliance.warnings.join(' | ')}`);
-  }
   console.log('====================================================================\n');
 
   return {
@@ -336,16 +398,16 @@ if (process.argv.includes('--list-topics')) {
   const allTopics = getAllKnownTopics();
   const availableCount = allTopics.filter(t => !isTopicAlreadyUsed(t, history)).length;
   console.log(
-    `\n📚 Banco de temas documentales verificados (${availableCount} disponibles / ${allTopics.length} en banco local + descubrimiento infinito activo):\n`
+    `\n📚 Banco de temas documentales (${availableCount} disponibles / ${allTopics.length} conocidos | publicados: ${history.usedIds.length}):\n`
   );
   for (const t of allTopics) {
     const used = isTopicAlreadyUsed(t, history);
-    console.log(`  - ${used ? '✅ [USADO]     ' : '🟢 [DISPONIBLE]'} [${t.category}] ${t.id} -> ${t.titleSeed}`);
+    console.log(`  - ${used ? '✅ [PUBLICADO] ' : '🟢 [DISPONIBLE]'} [${t.category}] ${t.id} -> ${t.titleSeed}`);
   }
   process.exit(0);
 }
 
 runEpisodeGenerator().catch(err => {
-  console.error('\n❌ Error generando documental:', err?.stack || err?.message || err);
+  console.error('\n❌ Error generando episodio documental:', err?.stack || err?.message || err);
   process.exit(1);
 });

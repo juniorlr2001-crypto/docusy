@@ -617,7 +617,8 @@ export async function fetchWikipediaFacts(
  */
 async function discoverNewVerifiedTopicsForCategory(
   category: TopicCategory,
-  history: TopicHistory
+  history: TopicHistory,
+  learningBriefEs?: string
 ): Promise<DocumentaryTopic[]> {
   if (!CONFIG.GEMINI_API_KEY) {
     return [];
@@ -654,10 +655,11 @@ PROHIBIDO REPETIR cualquiera de estos casos o artículos ya usados o conocidos:
 
 REGLAS ESTRICTAS:
 1. Cada caso DEBE ser un hecho real verificable en Wikipedia en español (nada de leyendas urbanas falsas, teorías conspirativas ni ficción).
-2. "wikiTitleEs" debe ser el título exacto del artículo en es.wikipedia.org con guiones bajos (ej. "Desastre_de_Bhopal", "Vuelo_232_de_United_Airlines", "Lago_Nyos").
-3. "titleSeed" debe ser un título documental magnético en español (alto CTR, sin mayúsculas gritonas ni clickbait falso).
-4. "visualTheme" debe estar en inglés describiendo la atmósfera cinematográfica IMAX 70mm.
-
+2. Prioriza casos con IMPACTO HUMANO UNIVERSAL para público frío (peligro físico visceral, supervivencia imposible, fenómenos extremos o fallos catastróficos comprensibles al instante sin saber historia previa).
+3. "wikiTitleEs" debe ser el título exacto del artículo en es.wikipedia.org con guiones bajos (ej. "Desastre_de_Bhopal", "Vuelo_232_de_United_Airlines", "Lago_Nyos").
+4. "titleSeed" debe ser un título corto, directo y magnético en español (<= 58 chars ideal).
+5. "visualTheme" debe estar en inglés describiendo la atmósfera cinematográfica IMAX 70mm bien iluminada.
+${learningBriefEs ? `\n${learningBriefEs}\n` : ''}
 Devuelve ÚNICAMENTE un JSON válido con este esquema exacto:
 {
   "candidates": [
@@ -673,7 +675,7 @@ Devuelve ÚNICAMENTE un JSON válido con este esquema exacto:
   ]
 }`;
 
-  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-3.5-flash'];
   let rawCandidates: any[] = [];
 
   for (const model of models) {
@@ -770,6 +772,8 @@ Devuelve ÚNICAMENTE un JSON válido con este esquema exacto:
 export async function selectNextDocumentaryTopic(
   options: {
     category?: TopicCategory;
+    recommendedCategory?: TopicCategory;
+    learningBriefEs?: string;
     customTopic?: string;
     topicId?: string;
     forceDiscover?: boolean;
@@ -807,7 +811,11 @@ export async function selectNextDocumentaryTopic(
   }
 
   const history = loadHistory();
-  const targetCategory = options.category || pickBalancedNextCategory(history);
+  const targetCategory =
+    options.category ||
+    (options.recommendedCategory && options.recommendedCategory !== history.lastCategory
+      ? options.recommendedCategory
+      : pickBalancedNextCategory(history));
 
   let unusedForTarget = allKnown.filter(
     t => t.category === targetCategory && !isTopicAlreadyUsed(t, history)
@@ -818,7 +826,7 @@ export async function selectNextDocumentaryTopic(
     console.log(
       `[TopicRadar] 🛰️ Buscando nuevos casos reales en Wikipedia para el pilar [${targetCategory}]...`
     );
-    const discovered = await discoverNewVerifiedTopicsForCategory(targetCategory, history);
+    const discovered = await discoverNewVerifiedTopicsForCategory(targetCategory, history, options.learningBriefEs);
     if (discovered.length > 0) {
       unusedForTarget = options.forceDiscover ? discovered : [...unusedForTarget, ...discovered];
     }

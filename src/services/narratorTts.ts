@@ -87,14 +87,14 @@ export async function generateNarrationAudio(options: {
 
   // Strategy 1: Gemini 2.5 Flash Native Audio TTS (human cinema documentary narrator)
   if (CONFIG.GEMINI_API_KEY) {
-    const selectedVoice = options.voiceName || (options.mood === 'mystery' ? 'Charon' : 'Fenrir');
+    const primaryVoice = options.voiceName || (options.mood === 'mystery' ? 'Charon' : 'Fenrir');
+    const candidateVoices = Array.from(new Set([primaryVoice, 'Fenrir', 'Charon']));
     const styleDirective =
       options.style === 'short'
-        ? 'Lee en español latinoamericano neutro como un narrador de documentales virales de suspenso: voz grave, intensa, ritmo ágil y dramático, con pausas precisas para atrapar desde la primera palabra. Lee ÚNICAMENTE el texto exacto:'
-        : 'Lee en español latinoamericano neutro como un narrador profesional de documentales de National Geographic y Netflix: voz grave, cálida, autoritativa y cinematográfica, con pausas dramáticas naturales y ritmo envolvente (ni lento ni apresurado). Lee ÚNICAMENTE el texto exacto:';
+        ? 'Lee en español latinoamericano neutro con ritmo RÁPIDO, urgente, directo e hipnótico de narrador viral: cero pausas largas, máxima tensión desde la primera sílaba. Lee ÚNICAMENTE el texto exacto:'
+        : 'Lee en español latinoamericano neutro como un narrador profesional de documentales de National Geographic y Netflix: voz grave, humana, autoritativa y dinámica, atrapando desde la primera palabra sin sonar lento ni robótico. Lee ÚNICAMENTE el texto exacto:';
 
-    // gemini-2.5-flash-preview-tts obeys style directives without speaking them (the exact NatGeo/Netflix documentary voice).
-    // Newer direct TTS models (gemini-3.8-flash-tts / gemini-3.1-flash-tts-preview) speak contents verbatim, so NEVER prepend styleDirective to them!
+    // gemini-2.5-flash-preview-tts obeys style directives without speaking them.
     const ttsModels: Array<{ id: string; supportsDirective: boolean }> = [
       { id: 'gemini-2.5-flash-preview-tts', supportsDirective: true },
       { id: 'gemini-3.8-flash-tts', supportsDirective: false },
@@ -104,6 +104,7 @@ export async function generateNarrationAudio(options: {
     for (const modelCfg of ttsModels) {
       const ttsModel = modelCfg.id;
       const ttsInputText = modelCfg.supportsDirective ? `${styleDirective}\n\n${cleanText}` : cleanText;
+      let selectedVoice = candidateVoices[0];
 
       for (let attempt = 1; attempt <= 4; attempt++) {
         // Polite spacing between Gemini TTS requests to stay comfortably inside free RPM limits
@@ -161,7 +162,11 @@ export async function generateNarrationAudio(options: {
             }
           } else {
             const errTxt = await res.text().catch(() => '');
-            console.warn(`[NarratorTTS] ⚠️ ${ttsModel} HTTP ${res.status}: ${errTxt.slice(0, 180)}`);
+            console.warn(`[NarratorTTS] ⚠️ ${ttsModel} (${selectedVoice}) HTTP ${res.status}: ${errTxt.slice(0, 180)}`);
+            if (res.status === 400 && selectedVoice !== 'Fenrir') {
+              selectedVoice = 'Fenrir';
+              continue;
+            }
             if (res.status === 400 || res.status === 404) break; // move to next TTS model cleanly
           }
         } catch (err: any) {
@@ -182,7 +187,7 @@ export async function generateNarrationAudio(options: {
       const tts = new EdgeTTS({
         voice,
         lang: voice.slice(0, 5),
-        rate: options.style === 'short' ? '+6%' : '+2%',
+        rate: options.style === 'short' ? '+11%' : '+3%',
         pitch: 'default',
       });
       await tts.ttsPromise(cleanText, mp3Path);

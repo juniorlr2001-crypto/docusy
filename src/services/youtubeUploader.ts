@@ -241,12 +241,21 @@ export async function uploadEpisodeBundleToYouTube(
     `[YouTubeUploader] ✅ Documental 16:9 publicado: ${docuRes.url} (miniatura=${docuRes.thumbnailAttached}, srt=${docuRes.captionsAttached}, comentario=${docuRes.commentPosted})`
   );
 
+  const enrichedShortDesc = [
+    meta.bridgeShort.description || '',
+    '',
+    `🎬 Documental completo en el canal: "${meta.youtube.title}"`,
+  ]
+    .join('\n')
+    .trim();
+
   console.log(`[YouTubeUploader] 📱 Subiendo Short puente 9:16 (${privacy}): "${meta.bridgeShort.title}"...`);
   const shortRes = await uploadVideoToYouTube({
     videoPath: meta.files.bridgeShort,
     title: meta.bridgeShort.title,
-    description: meta.bridgeShort.description,
+    description: enrichedShortDesc,
     tags: Array.from(new Set([...(meta.youtube.tags || []), 'Shorts'])),
+    firstCommentText: meta.bridgeShort.pinnedComment || meta.youtube.pinnedComment,
     privacyStatus: privacy,
   });
   console.log(`[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url}\n`);

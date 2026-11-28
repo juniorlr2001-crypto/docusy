@@ -73,6 +73,7 @@ const MOOD_ATMOSPHERE_VIDEO_QUERIES: Record<string, string[]> = {
 
 export class EpisodeMediaCurator {
   private usedVideoIds = new Set<string>();
+  private recentCrossEpisodeVideoIds = new Set<string>();
   private usedArchivalUrls = new Set<string>();
   private cloudflareQuotaExhausted = false;
   private falUnavailable = false;
@@ -80,6 +81,16 @@ export class EpisodeMediaCurator {
   private aiVideosGenerated = 0;
   private archivalPool: Array<{ url: string; title: string }> = [];
   private archivalLoaded = false;
+
+  constructor(recentStockVideoIds: string[] = []) {
+    for (const id of recentStockVideoIds) {
+      if (id) this.recentCrossEpisodeVideoIds.add(id);
+    }
+  }
+
+  getUsedStockVideoIds(): string[] {
+    return Array.from(this.usedVideoIds);
+  }
 
   /**
    * Optional Hollywood Cinema Tier via fal.ai: generates ultra-sharp IMAX 70mm photorealistic still frames
@@ -365,8 +376,9 @@ export class EpisodeMediaCurator {
         if (aspect === '9:16' && vh <= vw) continue;
 
         const slug = String(v.url || '').split('/video/')[1] || '';
-        const score = this.scoreCandidate(slug, query);
+        let score = this.scoreCandidate(slug, query);
         if (score < 0) continue; // blacklisted!
+        if (this.recentCrossEpisodeVideoIds.has(key)) score -= 40; // deprioritize clips already seen in recent episodes!
 
         const files: any[] = Array.isArray(v.video_files) ? v.video_files : [];
         const validMp4s = files
@@ -437,6 +449,7 @@ export class EpisodeMediaCurator {
 
         let score = this.scoreCandidate(String(h.tags || ''), query);
         if (score < 0) continue;
+        if (this.recentCrossEpisodeVideoIds.has(key)) score -= 40;
 
         // Prefer crisp 1920x1080 (large) over 1280x720 (medium)
         const vChoice = h.videos?.large?.url
@@ -921,7 +934,7 @@ export class EpisodeMediaCurator {
       ? script.bridgeShort.videoSearchQueries
       : script.bridgeShort.pexelsFallbackQueries || [];
     const prompts = script.bridgeShort.visualPromptsEn || [];
-    const totalSlots = Math.max(12, Math.min(15, Math.max(vidQueries.length, 13)));
+    const totalSlots = Math.max(14, Math.min(16, Math.max(vidQueries.length, 15)));
 
     const reusableVideos = existingBeatAssets.filter(
       a => a.mediaKind === 'video' && a.filePath && fs.existsSync(a.filePath)

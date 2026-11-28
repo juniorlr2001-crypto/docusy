@@ -498,7 +498,8 @@ export async function assembleDocumentaryVideo(params: {
 
       const isChapterFirst = i === 0;
       const isChapterLast = i === chapter.scenes.length - 1;
-      const fadeInChapter = isChapterFirst;
+      // Frame 1 Cold-Open Rule: NEVER fade from black on Chapter 1 Beat 1 (t=0.0s starts bright & instant!)
+      const fadeInChapter = chIdx > 0 && isChapterFirst;
       const fadeOutChapter = isChapterLast;
 
       const pad = String(sc.sceneNumber).padStart(2, '0');
@@ -516,9 +517,9 @@ export async function assembleDocumentaryVideo(params: {
 
       beatClipPaths.push(clipPath);
       beatRenderJobs.push(async () => {
-        // Build optional timed HUD overlay (chapter opener on beat 0, else locationStamp or keyQuote)
+        // Skip Chapter 1 opener card on Beat 1 so the cold-open hook visual is 100% unobstructed in the first 10s!
         let timedOverlay: TimedOverlaySpec | undefined;
-        if (isChapterFirst) {
+        if (isChapterFirst && chIdx > 0) {
           const metaLine = [chapter.chapterLocation, chapter.chapterDate].filter(Boolean).join(' · ');
           const ovPath = path.join(clipsDir, `ov_ch${chapter.chapterNumber}.png`);
           await buildChapterOpenerOverlayPng({
@@ -846,8 +847,9 @@ export async function assembleBridgeShortVideo(params: {
       captionChunk: captionChunks[i],
       channelName,
       progress: (cursor + segDur) / Math.max(1, shortDurationSec),
-      showCta: i >= captionChunks.length - 2,
+      showCta: false,
       mood: script.mood,
+      captionTheme: script.creativeDna?.shortCaptionTheme,
     });
 
     const segOut = path.join(shortDir, `short_cap_${i}.mp4`);
