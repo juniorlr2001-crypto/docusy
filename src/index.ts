@@ -21,6 +21,7 @@ import { ensureCinemaSfxPack, ensureDocumentaryMusicBed } from './services/ambie
 import { assembleBridgeShortVideo, assembleDocumentaryVideo } from './services/docuAssembler.js';
 import { auditDocumentaryCompliance } from './services/complianceGuard.js';
 import { uploadEpisodeBundleToYouTube } from './services/youtubeUploader.js';
+import { sendShortPackageToTelegram } from './services/telegramDelivery.js';
 import {
   buildSelfLearningCreativePlan,
   recordCompletedEpisodeInMemory,
@@ -308,6 +309,8 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
 
   let uploadedDocuId: string | undefined;
   let uploadedShortId: string | undefined;
+  let uploadedDocuUrl: string | undefined;
+  let uploadedShortUrl: string | undefined;
 
   const autoUpload =
     process.argv.includes('--auto-upload') ||
@@ -318,12 +321,26 @@ async function runEpisodeGenerator(): Promise<EpisodeResult> {
       const up = await uploadEpisodeBundleToYouTube(metadataPath);
       uploadedDocuId = up.documentary.videoId;
       uploadedShortId = up.bridgeShort.videoId;
+      uploadedDocuUrl = up.documentary.url;
+      uploadedShortUrl = up.bridgeShort.url;
     } else {
       console.warn(
         '[YouTubeUploader] ⚠️ --auto-upload activo pero faltan DOCU_YOUTUBE_CLIENT_ID / SECRET / REFRESH_TOKEN.'
       );
     }
   }
+
+  // Send clean 1080p Short MP4 + TikTok/Reels ready-to-paste copy privately to Telegram ($0)
+  await sendShortPackageToTelegram({
+    shortVideoPath: shortPath,
+    channelLabel: `🎬 @${CONFIG.CHANNEL_NAME}`,
+    youtubeTitle: script.youtubeTitle,
+    shortTitle: script.bridgeShort.youtubeTitle,
+    pinnedComment: script.pinnedComment,
+    hashtags: script.bridgeShort.hashtags,
+    youtubeDocuUrl: uploadedDocuUrl,
+    youtubeShortUrl: uploadedShortUrl,
+  });
 
   // Persist Creative DNA + used stock video IDs into self-learning memory (`data/performance_memory.json` -> `radar-state`)
   if (!quickMode) {

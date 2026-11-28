@@ -49,6 +49,10 @@ export const CONFIG = {
   YOUTUBE_REFRESH_TOKEN: envFirst('DOCU_YOUTUBE_REFRESH_TOKEN'),
   YOUTUBE_PRIVACY: envFirst('DOCU_YOUTUBE_PRIVACY') || 'unlisted',
   CHANNEL_NAME: envFirst('DOCU_CHANNEL_NAME') || 'docusy',
+
+  // Optional $0 Telegram Bot delivery for instant TikTok / Reels / Facebook cross-posting
+  TELEGRAM_BOT_TOKEN: envFirst('DOCU_TELEGRAM_BOT_TOKEN', 'TELEGRAM_BOT_TOKEN'),
+  TELEGRAM_CHAT_ID: envFirst('DOCU_TELEGRAM_CHAT_ID', 'TELEGRAM_CHAT_ID'),
 };
 
 for (const dir of [CONFIG.DATA_DIR, CONFIG.OUTPUT_DIR, CONFIG.MUSIC_DIR, CONFIG.SFX_DIR]) {

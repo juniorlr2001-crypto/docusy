@@ -140,6 +140,8 @@ jobs:
           DOCU_YOUTUBE_REFRESH_TOKEN: ${{ secrets.DOCU_YOUTUBE_REFRESH_TOKEN }}
           DOCU_YOUTUBE_PRIVACY: ${{ inputs.privacy || secrets.DOCU_YOUTUBE_PRIVACY || 'public' }}
           DOCU_CHANNEL_NAME: ${{ secrets.DOCU_CHANNEL_NAME || 'docusy' }}
+          DOCU_TELEGRAM_BOT_TOKEN: ${{ secrets.DOCU_TELEGRAM_BOT_TOKEN }}
+          DOCU_TELEGRAM_CHAT_ID: ${{ secrets.DOCU_TELEGRAM_CHAT_ID }}
           DOCU_AUTO_UPLOAD: 'true'
           DOCU_CLEAN_WORK: 'true'
         run: |
