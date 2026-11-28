@@ -14,7 +14,8 @@
     "voyager-1-disco-oro",
     "rescate-cueva-tham-luang",
     "vasa-barco-suecia-1628",
-    "paso-diatlov-1959"
+    "paso-diatlov-1959",
+    "milagro-de-los-andes-1972"
   ],
   "usedWikiTitles": [
     "jose_salvador_alvarenga",
@@ -33,7 +34,8 @@
     "rescate_de_la_cueva_de_tham_luang",
     "vasa",
     "vasa_barco",
-    "incidente_del_paso_diatlov"
+    "incidente_del_paso_diatlov",
+    "vuelo_571_de_la_fuerza_aerea_uruguaya"
   ],
   "usedTitles": [
     "el_hombre_que_sobrevivio_438_dias_a_la_deriva_en_el_oceano_pacifico",
@@ -51,9 +53,10 @@
     "atrapados_4_kilometros_bajo_tierra_y_bajo_el_agua_la_operacion_imposible_de_tham_luang",
     "el_dia_que_un_puente_de_acero_se_retorcio_como_goma_y_se_desplomo_por_el_viento",
     "el_barco_de_guerra_mas_caro_de_su_epoca_que_se_hundio_a_los_20_minutos_de_zarpar",
-    "que_ocurrio_realmente_en_el_paso_diatlov_el_enigma_helado_de_1959_que_la_ciencia_tardo_62_anos_en_explicar"
+    "que_ocurrio_realmente_en_el_paso_diatlov_el_enigma_helado_de_1959_que_la_ciencia_tardo_62_anos_en_explicar",
+    "72_dias_a_4_000_metros_bajo_cero_como_sobrevivieron_al_accidente_de_los_andes_cuando_el_mundo_los_dio_por_muertos"
   ],
-  "lastCategory": "misterios",
+  "lastCategory": "supervivencia",
   "historyLog": [
     {
       "id": "alvarenga-438-dias",
@@ -159,6 +162,13 @@
       "wikiTitleEs": "Incidente_del_paso_Diátlov",
       "titleSeed": "Qué ocurrió realmente en el Paso Diátlov: el enigma helado de 1959 que la ciencia tardó 62 años en explicar",
       "usedAt": "2026-11-27T21:36:43.660Z"
+    },
+    {
+      "id": "milagro-de-los-andes-1972",
+      "category": "supervivencia",
+      "wikiTitleEs": "Vuelo_571_de_la_Fuerza_Aérea_Uruguaya",
+      "titleSeed": "72 días a 4,000 metros bajo cero: cómo sobrevivieron al accidente de los Andes cuando el mundo los dio por muertos",
+      "usedAt": "2026-11-28T13:09:02.650Z"
     }
   ]
 }
