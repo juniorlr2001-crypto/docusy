@@ -184,4 +184,5 @@ jobs:
             output/*/captions.srt
             output/*/thumbnail_16x9.jpg
             output/*/thumbnail_short_9x16.jpg
-          retention-days: 30
+            output/*/short_9x16.mp4
+          retention-days: 5
