@@ -241,13 +241,19 @@ export async function uploadEpisodeBundleToYouTube(
     `[YouTubeUploader] ✅ Documental 16:9 publicado: ${docuRes.url} (miniatura=${docuRes.thumbnailAttached}, srt=${docuRes.captionsAttached}, comentario=${docuRes.commentPosted})`
   );
 
+  const handleTag = `@${CONFIG.CHANNEL_NAME.replace(/^@/, '')}`;
   const enrichedShortDesc = [
     meta.bridgeShort.description || '',
     '',
-    `🎬 Documental completo en el canal: "${meta.youtube.title}"`,
+    `🎬 Ver documental completo tocando ${handleTag} → "${meta.youtube.title}"`,
   ]
     .join('\n')
     .trim();
+
+  const baseShortQuestion = (meta.bridgeShort.pinnedComment || meta.youtube.pinnedComment || '').trim();
+  const shortRedirectComment = baseShortQuestion.includes(handleTag)
+    ? baseShortQuestion
+    : `${baseShortQuestion}\n\n🎬 Mira el documental completo tocando aquí 👉 ${handleTag} ("${meta.youtube.title}")`.trim();
 
   console.log(`[YouTubeUploader] 📱 Subiendo Short puente 9:16 (${privacy}): "${meta.bridgeShort.title}"...`);
   const shortRes = await uploadVideoToYouTube({
@@ -255,7 +261,7 @@ export async function uploadEpisodeBundleToYouTube(
     title: meta.bridgeShort.title,
     description: enrichedShortDesc,
     tags: Array.from(new Set([...(meta.youtube.tags || []), 'Shorts'])),
-    firstCommentText: meta.bridgeShort.pinnedComment || meta.youtube.pinnedComment,
+    firstCommentText: shortRedirectComment,
     privacyStatus: privacy,
   });
   console.log(`[YouTubeUploader] ✅ Short puente 9:16 publicado: ${shortRes.url}\n`);
